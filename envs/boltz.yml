@@ -1,0 +1,14 @@
+name: boltz
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - git
+  - wget
+  - numpy
+  - pandas
+  - biopython
+  - pip:
+      - boltz

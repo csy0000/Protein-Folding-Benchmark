@@ -1,0 +1,25 @@
+name: folding-benchmark
+
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - pyyaml
+  - tqdm
+  - biopython
+  - mdtraj
+  - gemmi
+  - matplotlib
+  - jupyterlab
+  - ipykernel
+  - wget
+  - curl
+  - git
+  - pip

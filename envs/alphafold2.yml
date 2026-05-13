@@ -1,0 +1,15 @@
+name: alphafold2
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - git
+  - wget
+  - hmmer
+  - hhsuite
+  - kalign2
+  - openmm
+  - pdbfixer

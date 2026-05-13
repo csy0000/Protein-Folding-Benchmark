@@ -1,0 +1,17 @@
+name: rosettafold
+channels:
+  - pytorch
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - git
+  - wget
+  - numpy
+  - scipy
+  - biopython
+  - hhsuite
+  - csblast
+  - blast

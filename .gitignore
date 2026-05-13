@@ -1,2 +1,12 @@
 # models are heavy
 models/
+weights/
+__pycache__/
+*.pyc
+
+# data are heavy
+data/
+*.log
+
+# codex files
+codex-plan/

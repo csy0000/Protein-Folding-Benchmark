@@ -1,0 +1,32 @@
+models:
+  esmfold:
+    enabled: true
+    runner: bash runners/run_esmfold.sh
+
+  omegafold:
+    enabled: true
+    runner: bash runners/run_omegafold.sh
+
+  boltz:
+    enabled: false
+    runner: bash runners/run_boltz.sh
+
+  chai1:
+    enabled: false
+    runner: bash runners/run_chai1.sh
+
+  colabfold:
+    enabled: false
+    runner: bash runners/run_colabfold.sh
+
+  alphafold2:
+    enabled: false
+    runner: bash runners/run_alphafold2.sh
+
+  openfold:
+    enabled: false
+    runner: bash runners/run_openfold.sh
+
+  rosettafold:
+    enabled: false
+    runner: bash runners/run_rosettafold.sh

@@ -1,0 +1,26 @@
+name: esmfold
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - git
+  - wget
+  - numpy
+  - biopython
+  - pip:
+      - torch
+      - fair-esm
+      - biotite
+      - dm-tree
+      - einops
+      - ml-collections
+      - omegaconf
+      - pytorch-lightning
+      - scipy
+      - modelcif
+      - dllogger @ git+https://github.com/NVIDIA/dllogger.git
+      - openfold @ git+https://github.com/aqlaboratory/openfold.git

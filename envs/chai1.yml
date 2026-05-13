@@ -1,0 +1,14 @@
+name: chai1
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - git
+  - wget
+  - numpy
+  - pandas
+  - biopython
+  - pip:
+      - chai_lab

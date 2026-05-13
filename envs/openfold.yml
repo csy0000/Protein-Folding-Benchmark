@@ -1,0 +1,16 @@
+name: openfold
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - git
+  - wget
+  - numpy
+  - biopython
+  - hhsuite
+  - kalign2
