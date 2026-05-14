@@ -47,7 +47,7 @@ Expected output files include:
 - `data/scores/all_targets_model_summary.md`
 - `data/scores/benchmark_run_status.csv`
 
-Current canonical score CSVs contain 17 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, and ColabFold 5. The enabled validated model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, and `colabfold`.
+Current canonical score CSVs contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The enabled validated model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`.
 
 Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker.
 

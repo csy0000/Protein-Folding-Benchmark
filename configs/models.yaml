@@ -1,7 +1,13 @@
 models:
   openfold:
-    enabled: false
+    enabled: true
     runner: bash runners/run_openfold.sh
+    env_name: openfold
+    repo_dir: ${OPENFOLD_REPO:-models/openfold}
+    params_dir: ${OPENFOLD_PARAMS_DIR:-weights/colabfold/params}
+    data_dir: ${OPENFOLD_DATA_DIR:-work/openfold_inputs}
+    output_subdir: openfold
+    notes: "OpenFold single-sequence smoke backend; uses AlphaFold params from weights/colabfold/params unless overridden."
 
   openfold3:
     enabled: false

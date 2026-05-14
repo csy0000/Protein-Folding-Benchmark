@@ -35,6 +35,10 @@ Model families:
 
 AlphaFold3 is included as a future optional restricted-access baseline and remains disabled by default. Its inference code is available, but model parameters and outputs are subject to the applicable Google/DeepMind terms, including non-commercial-use restrictions. Do not use AlphaFold3 for non-academic or commercial work unless rights, licensing, and any approved commercial route have been resolved.
 
+OpenFold is included as an AF2-style backend and is enabled after a two-target smoke validation. The current benchmark runner uses single-sequence mode with AlphaFold-style parameters from `weights/colabfold/params`; full MSA/template OpenFold runs still require separate OpenFold-compatible databases supplied through `OPENFOLD_DATA_DIR` and related `OPENFOLD_*` environment variables. The benchmark does not download OpenFold sequence/template databases automatically.
+
+Model-specific setup notes are in `docs/model_setup_notes.md`. The local OpenFold installation and smoke-run notes are in `models/openfold/README.md`; other backend status details are tracked in `docs/model_installation_status.md`.
+
 Exact license and usage terms should be checked from each upstream repository before publication, redistribution, or benchmark release.
 
 ## Environment Policy
@@ -184,7 +188,7 @@ The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquit
 | OmegaFold (`omegafold`) | yes | yes | yes | 1 | Deterministic/single-output sequence baseline. |
 | Chai-1 (`chai1`) | yes | yes | yes | 5 | Uses genuine generated samples only. |
 | Boltz-2 (`boltz2`) | yes | yes | yes | 5 | Current Boltz backend; uses genuine generated samples only. |
-| OpenFold (`openfold`) | no | no | no | 0 | AF2-style PyTorch implementation; runner placeholder unless already functional. |
+| OpenFold (`openfold`) | yes | yes | yes | 1 | Single-sequence smoke mode using AlphaFold-style params from `weights/colabfold/params`; see `models/openfold/README.md`. |
 | OpenFold3 (`openfold3`) | no | no | no | 0 | AF3-style open implementation; setup pending. |
 | ColabFold (`colabfold`) | yes | yes | yes | 5 | Runs `colabfold_batch` with `--msa-mode single_sequence`; no local sequence databases are required for the current smoke workflow. |
 | AlphaFold2 (`alphafold2`) | no | no | no | 0 | Canonical AF2 baseline; full databases not required for this project unless explicitly requested. |
@@ -192,4 +196,4 @@ The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquit
 
 The old backend ID `boltz` is deprecated. `runners/run_boltz.sh` is retained only as a compatibility wrapper that delegates to `runners/run_boltz2.sh`.
 
-The current canonical score outputs should contain 17 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, and ColabFold 5. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
+The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
