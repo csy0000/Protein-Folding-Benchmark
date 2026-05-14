@@ -49,4 +49,6 @@ Expected output files include:
 
 Current canonical score CSVs contain 17 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, and ColabFold 5. The enabled validated model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, and `colabfold`.
 
+Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker.
+
 For every future Codex instruction, write a dated execution log under `codex-plan/` using the `YYYYMMDD_` filename prefix.

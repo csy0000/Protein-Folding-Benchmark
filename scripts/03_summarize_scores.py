@@ -9,17 +9,22 @@ import pandas as pd
 
 
 SUMMARY_COLUMNS = [
+    "target_id",
     "model",
     "n_predictions",
     "n_success",
     "n_failed",
     "best_prediction",
     "best_rank_index",
+    "best_rank_by_lddt_ca",
+    "best_lddt_ca",
     "best_tmalign_tm_score_ref",
     "best_tmalign_tm_score_pred",
     "best_tmalign_rmsd",
     "best_tmalign_aligned_length",
     "best_ca_rmsd",
+    "mean_lddt_ca",
+    "std_lddt_ca",
     "mean_tmalign_tm_score_ref",
     "std_tmalign_tm_score_ref",
     "mean_tmalign_rmsd",
@@ -31,6 +36,7 @@ SUMMARY_COLUMNS = [
     "ranking_primary_metric",
     "ranking_secondary_metric",
     "ranking_tertiary_metric",
+    "ranking_quaternary_metric",
     "ranking_note",
 ]
 
@@ -82,31 +88,36 @@ def select_best_row(
     primary_metric: str,
     secondary_metric: str,
     tertiary_metric: str,
-) -> tuple[pd.Series | None, str, str, str, str]:
+    quaternary_metric: str,
+) -> tuple[pd.Series | None, str, str, str, str, str]:
     if success_df.empty:
-        return None, primary_metric, secondary_metric, tertiary_metric, "no successful predictions"
+        return None, primary_metric, secondary_metric, tertiary_metric, quaternary_metric, "no successful predictions"
 
     primary = numeric_series(success_df, primary_metric)
-    use_tmalign = primary_metric in success_df and primary.notna().any()
+    use_primary = primary_metric in success_df and primary.notna().any()
 
     sortable = success_df.copy()
-    if use_tmalign:
+    if use_primary:
         sortable["_primary"] = primary
         sortable["_secondary"] = numeric_series(success_df, secondary_metric)
         sortable["_tertiary"] = numeric_series(success_df, tertiary_metric)
+        sortable["_quaternary"] = numeric_series(success_df, quaternary_metric)
         sortable = sortable.sort_values(
-            ["_primary", "_secondary", "_tertiary", "prediction"],
-            ascending=[False, True, True, True],
+            ["_primary", "_secondary", "_tertiary", "_quaternary", "prediction"],
+            ascending=[False, False, True, True, True],
             na_position="last",
         )
-        note = f"ranked by highest {primary_metric}, then lowest {secondary_metric}, then lowest {tertiary_metric}"
-        return sortable.iloc[0], primary_metric, secondary_metric, tertiary_metric, note
+        note = (
+            f"ranked by highest {primary_metric}, then highest {secondary_metric}, "
+            f"then lowest {tertiary_metric}, then lowest {quaternary_metric}"
+        )
+        return sortable.iloc[0], primary_metric, secondary_metric, tertiary_metric, quaternary_metric, note
 
     fallback_metric = "ca_rmsd"
     sortable["_primary"] = numeric_series(success_df, fallback_metric)
     sortable = sortable.sort_values(["_primary", "prediction"], ascending=[True, True], na_position="last")
-    note = f"TM-align metric unavailable; ranked by lowest {fallback_metric}"
-    return sortable.iloc[0], fallback_metric, "", "", note
+    note = f"{primary_metric} unavailable; ranked by lowest {fallback_metric}"
+    return sortable.iloc[0], fallback_metric, "", "", "", note
 
 
 def summarize_model(
@@ -115,6 +126,7 @@ def summarize_model(
     primary_metric: str,
     secondary_metric: str,
     tertiary_metric: str,
+    quaternary_metric: str,
 ) -> dict[str, object]:
     ranking_values = pd.concat(
         [
@@ -129,25 +141,35 @@ def summarize_model(
     error_ok = group["error"].map(is_empty_error) if "error" in group else pd.Series(True, index=group.index)
     success = group[error_ok & has_ranking_value].copy()
 
-    best, used_primary, used_secondary, used_tertiary, note = select_best_row(
+    best, used_primary, used_secondary, used_tertiary, used_quaternary, note = select_best_row(
         success,
         primary_metric,
         secondary_metric,
         tertiary_metric,
+        quaternary_metric,
     )
 
+    target_id = ""
+    if "target_id" in group and group["target_id"].notna().any():
+        target_id = str(group["target_id"].dropna().iloc[0])
+
     row: dict[str, object] = {
+        "target_id": target_id,
         "model": model,
         "n_predictions": int(len(group)),
         "n_success": int(len(success)),
         "n_failed": int(len(group) - len(success)),
         "best_prediction": "",
         "best_rank_index": np.nan,
+        "best_rank_by_lddt_ca": np.nan,
+        "best_lddt_ca": np.nan,
         "best_tmalign_tm_score_ref": np.nan,
         "best_tmalign_tm_score_pred": np.nan,
         "best_tmalign_rmsd": np.nan,
         "best_tmalign_aligned_length": np.nan,
         "best_ca_rmsd": np.nan,
+        "mean_lddt_ca": mean_value(numeric_series(success, "lddt_ca")),
+        "std_lddt_ca": sample_std(numeric_series(success, "lddt_ca")),
         "mean_tmalign_tm_score_ref": mean_value(numeric_series(success, "tmalign_tm_score_ref")),
         "std_tmalign_tm_score_ref": sample_std(numeric_series(success, "tmalign_tm_score_ref")),
         "mean_tmalign_rmsd": mean_value(numeric_series(success, "tmalign_rmsd")),
@@ -159,6 +181,7 @@ def summarize_model(
         "ranking_primary_metric": used_primary,
         "ranking_secondary_metric": used_secondary,
         "ranking_tertiary_metric": used_tertiary,
+        "ranking_quaternary_metric": used_quaternary,
         "ranking_note": note,
     }
 
@@ -167,6 +190,8 @@ def summarize_model(
             {
                 "best_prediction": best.get("prediction", ""),
                 "best_rank_index": rank_index(best.get("prediction", "")),
+                "best_rank_by_lddt_ca": rank_index(best.get("prediction", "")),
+                "best_lddt_ca": pd.to_numeric(best.get("lddt_ca", np.nan), errors="coerce"),
                 "best_tmalign_tm_score_ref": pd.to_numeric(best.get("tmalign_tm_score_ref", np.nan), errors="coerce"),
                 "best_tmalign_tm_score_pred": pd.to_numeric(best.get("tmalign_tm_score_pred", np.nan), errors="coerce"),
                 "best_tmalign_rmsd": pd.to_numeric(best.get("tmalign_rmsd", np.nan), errors="coerce"),
@@ -183,6 +208,7 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         "model",
         "n_success/n_predictions",
         "best_prediction",
+        "best_lddt_ca",
         "best_tmalign_tm_score_ref",
         "best_tmalign_rmsd",
         "best_ca_rmsd",
@@ -196,6 +222,10 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         return str(value)
 
     lines = [
+        "Primary metric: lDDT-C-alpha",
+        "",
+        "Secondary metric: TM-score normalized by reference length",
+        "",
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",
     ]
@@ -204,6 +234,7 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
             row["model"],
             f"{int(row['n_success'])}/{int(row['n_predictions'])}",
             row["best_prediction"],
+            row["best_lddt_ca"],
             row["best_tmalign_tm_score_ref"],
             row["best_tmalign_rmsd"],
             row["best_ca_rmsd"],
@@ -217,9 +248,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Summarize per-prediction structure scores into per-model rankings.")
     parser.add_argument("--scores", required=True, help="Input per-prediction score CSV.")
     parser.add_argument("--output", required=True, help="Output per-model summary CSV.")
-    parser.add_argument("--primary-metric", default="tmalign_tm_score_ref")
-    parser.add_argument("--secondary-metric", default="tmalign_rmsd")
-    parser.add_argument("--tertiary-metric", default="ca_rmsd")
+    parser.add_argument("--primary-metric", default="lddt_ca")
+    parser.add_argument("--secondary-metric", default="tmalign_tm_score_ref")
+    parser.add_argument("--tertiary-metric", default="tmalign_rmsd")
+    parser.add_argument("--quaternary-metric", default="ca_rmsd")
     parser.add_argument("--markdown-output", help="Optional compact Markdown summary output path.")
     args = parser.parse_args()
 
@@ -232,13 +264,20 @@ def main() -> None:
         raise SystemExit("Input scores CSV must contain a 'model' column")
 
     rows = [
-        summarize_model(model, group, args.primary_metric, args.secondary_metric, args.tertiary_metric)
+        summarize_model(
+            model,
+            group,
+            args.primary_metric,
+            args.secondary_metric,
+            args.tertiary_metric,
+            args.quaternary_metric,
+        )
         for model, group in df.groupby("model", sort=True)
     ]
     summary = pd.DataFrame(rows, columns=SUMMARY_COLUMNS)
     summary = summary.sort_values(
-        ["best_tmalign_tm_score_ref", "best_tmalign_rmsd", "best_ca_rmsd", "model"],
-        ascending=[False, True, True, True],
+        ["best_lddt_ca", "best_tmalign_tm_score_ref", "best_tmalign_rmsd", "best_ca_rmsd", "model"],
+        ascending=[False, False, True, True, True],
         na_position="last",
     )
     summary.to_csv(output_path, index=False)

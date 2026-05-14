@@ -12,8 +12,10 @@ import pandas as pd
 OUTPUT_COLUMNS = [
     "model",
     "n_targets",
-    "n_targets_successful",
+    "n_targets_success",
     "n_total_predictions",
+    "mean_best_lddt_ca",
+    "std_best_lddt_ca",
     "mean_best_tmalign_tm_score_ref",
     "std_best_tmalign_tm_score_ref",
     "mean_best_tmalign_rmsd",
@@ -46,8 +48,9 @@ def sample_std(series: pd.Series) -> float:
 def write_markdown(summary: pd.DataFrame, output: Path) -> None:
     headers = [
         "model",
-        "n_targets_successful/n_targets",
+        "n_targets_success/n_targets",
         "n_total_predictions",
+        "mean_best_lddt_ca",
         "mean_best_tmalign_tm_score_ref",
         "mean_best_tmalign_rmsd",
         "mean_best_ca_rmsd",
@@ -61,14 +64,19 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         return str(value)
 
     lines = [
+        "Primary metric: lDDT-C-alpha",
+        "",
+        "Secondary metric: TM-score normalized by reference length",
+        "",
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",
     ]
     for _, row in summary.iterrows():
         values = [
             row["model"],
-            f"{int(row['n_targets_successful'])}/{int(row['n_targets'])}",
+            f"{int(row['n_targets_success'])}/{int(row['n_targets'])}",
             int(row["n_total_predictions"]),
+            row["mean_best_lddt_ca"],
             row["mean_best_tmalign_tm_score_ref"],
             row["mean_best_tmalign_rmsd"],
             row["mean_best_ca_rmsd"],
@@ -107,8 +115,10 @@ def main() -> None:
             {
                 "model": model,
                 "n_targets": int(group["target_id"].nunique()),
-                "n_targets_successful": int((n_success > 0).sum()),
+                "n_targets_success": int((n_success > 0).sum()),
                 "n_total_predictions": int(pd.to_numeric(group["n_predictions"], errors="coerce").fillna(0).sum()),
+                "mean_best_lddt_ca": mean_value(group["best_lddt_ca"]),
+                "std_best_lddt_ca": sample_std(group["best_lddt_ca"]),
                 "mean_best_tmalign_tm_score_ref": mean_value(group["best_tmalign_tm_score_ref"]),
                 "std_best_tmalign_tm_score_ref": sample_std(group["best_tmalign_tm_score_ref"]),
                 "mean_best_tmalign_rmsd": mean_value(group["best_tmalign_rmsd"]),
@@ -121,8 +131,8 @@ def main() -> None:
 
     summary = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
     summary = summary.sort_values(
-        ["mean_best_tmalign_tm_score_ref", "mean_best_tmalign_rmsd", "mean_best_ca_rmsd", "model"],
-        ascending=[False, True, True, True],
+        ["mean_best_lddt_ca", "mean_best_tmalign_tm_score_ref", "mean_best_tmalign_rmsd", "mean_best_ca_rmsd", "model"],
+        ascending=[False, False, True, True, True],
         na_position="last",
     )
 

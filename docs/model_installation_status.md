@@ -19,4 +19,6 @@ Ubiquitin / `1UBQ_ubiquitin` has also been run for the currently enabled validat
 - `data/scores/1UBQ_ubiquitin_scores.csv`
 - `data/scores/1UBQ_ubiquitin_model_summary.csv`
 
-The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, and `colabfold`. The current canonical score CSVs contain 17 rows per target, and the cross-target summary is `data/scores/all_targets_model_summary.csv`.
+The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, and `colabfold`. The current canonical score CSVs contain 17 rows per target, include lDDT-C-alpha columns from `scripts/02_score_predictions.py`, and rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. The cross-target summary is `data/scores/all_targets_model_summary.csv`.
+
+AlphaFold3 remains disabled as a future restricted/non-commercial-use backend and should not be enabled until parameter and output usage terms are compatible with the intended use.

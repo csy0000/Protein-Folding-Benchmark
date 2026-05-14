@@ -101,33 +101,31 @@ python scripts/02_score_predictions.py \
 
 Use `--config configs/models.yaml --only-enabled-models` for benchmark score generation. This prevents stale prediction folders, such as archived or deprecated backend IDs, from contaminating the canonical CSV.
 
-## Scoring
+## Scoring and Ranking
 
-Current scoring includes:
+The benchmark now records both local and global structural metrics.
 
-- C-alpha RMSD after structural superposition using sequential residue order.
-- C-alpha RMSD after structural superposition using residue sequence numbers.
-- TM-align / US-align structural alignment when `--use-tmalign` is set.
-- TM-score normalized by reference length.
-- TM-score normalized by prediction length.
-- TM-align RMSD and aligned length.
-- C-alpha diagnostic counts for reference, prediction, and aligned residues.
-- Semicolon-separated residue numbers missing from either structure.
-- Internal RMSD Z-score across all successful predictions for one target.
+Primary ranking metric:
 
-Recommended primary metric:
+- `lddt_ca`: C-alpha-only local distance difference test. Higher is better.
 
-- `tmalign_tm_score_ref`, higher is better.
+Secondary ranking metric:
 
-Recommended secondary metrics:
+- `tmalign_tm_score_ref`: TM-score from TM-align/US-align, normalized by the reference length. Higher is better.
 
-- `tmalign_rmsd`, lower is better.
-- `ca_rmsd`, lower is better.
-- `n_aligned_ca`, higher is better.
+Additional diagnostic metrics:
 
-For very short peptides such as Chignolin, TM-score and RMSD can be unstable. Chignolin is mainly a pipeline-debug target, not a robust benchmark target.
+- `tmalign_rmsd`: RMSD from TM-align/US-align. Lower is better.
+- `ca_rmsd`: C-alpha RMSD using the configured matching mode. Lower is better.
+- `n_aligned_ca`: number of aligned C-alpha atoms.
 
-Future scoring should include GDT_TS, lDDT-Ca, runtime, GPU memory, and energy consumption or CO2 estimates.
+Current scoring also records TM-score normalized by prediction length, TM-align aligned length, TM-align sequence identity, C-alpha diagnostic counts, missing residue lists, and internal RMSD Z-score across all successful predictions for one target.
+
+For the current benchmark, lDDT-C-alpha is treated as the major metric because it measures local distance agreement and is superposition-free. TM-score remains the main global-fold metric and is used as the secondary ranking criterion.
+
+For very short targets such as Chignolin, lDDT-C-alpha and TM-score can be noisy. Chignolin is mainly a smoke-test target; ubiquitin is the first more meaningful folded-protein target.
+
+Future scoring should include GDT_TS, runtime, GPU memory, and energy consumption or CO2 estimates.
 
 ## Model-Level Summary and Ranking
 
@@ -140,7 +138,7 @@ python scripts/03_summarize_scores.py \
   --markdown-output data/scores/1UAO_chignolin_model_summary.md
 ```
 
-By default, ranking uses `tmalign_tm_score_ref` as the primary metric when available. Higher `tmalign_tm_score_ref` is better; lower `tmalign_rmsd` and `ca_rmsd` are better. For very short targets such as Chignolin, these metrics are mainly for pipeline validation, not final scientific benchmarking.
+By default, ranking uses `lddt_ca` as the primary metric, `tmalign_tm_score_ref` as the secondary metric, `tmalign_rmsd` as the tertiary metric, and `ca_rmsd` as the quaternary metric. Higher `lddt_ca` and `tmalign_tm_score_ref` are better; lower `tmalign_rmsd` and `ca_rmsd` are better.
 
 ## Multi-Target Benchmark
 

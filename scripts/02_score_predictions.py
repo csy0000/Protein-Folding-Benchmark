@@ -84,6 +84,80 @@ def ca_diagnostics(
     }
 
 
+def empty_lddt_result(error: str = "") -> dict[str, object]:
+    return {
+        "lddt_ca": np.nan,
+        "lddt_ca_n_pairs": 0,
+        "lddt_ca_cutoff": np.nan,
+        "lddt_ca_f_0p5": np.nan,
+        "lddt_ca_f_1p0": np.nan,
+        "lddt_ca_f_2p0": np.nan,
+        "lddt_ca_f_4p0": np.nan,
+        "lddt_ca_error": error,
+    }
+
+
+def matched_ca_atoms(
+    reference_pdb: Path,
+    predicted_pdb: Path,
+    ref_chain: str | None,
+    pred_chain: str | None,
+    match_mode: str,
+) -> tuple[list[object], list[object]]:
+    ref_keys, ref_atoms = get_ca_atoms(reference_pdb, ref_chain)
+    pred_keys, pred_atoms = get_ca_atoms(predicted_pdb, pred_chain)
+
+    if match_mode == "sequential":
+        n_aligned = min(len(ref_atoms), len(pred_atoms))
+        return ref_atoms[:n_aligned], pred_atoms[:n_aligned]
+
+    pred_map = dict(zip(pred_keys, pred_atoms))
+    common_keys = [k for k in ref_keys if k in pred_map]
+    ref_map = dict(zip(ref_keys, ref_atoms))
+    return [ref_map[k] for k in common_keys], [pred_map[k] for k in common_keys]
+
+
+def lddt_ca_score(
+    reference_pdb: Path,
+    predicted_pdb: Path,
+    ref_chain: str | None,
+    pred_chain: str | None,
+    match_mode: str,
+    cutoff: float,
+) -> dict[str, object]:
+    ref_atoms, pred_atoms = matched_ca_atoms(reference_pdb, predicted_pdb, ref_chain, pred_chain, match_mode)
+    if len(ref_atoms) < 2:
+        return empty_lddt_result("fewer than two matched C-alpha atoms") | {"lddt_ca_cutoff": cutoff}
+
+    ref_coords = np.asarray([atom.coord for atom in ref_atoms], dtype=float)
+    pred_coords = np.asarray([atom.coord for atom in pred_atoms], dtype=float)
+
+    ref_deltas = ref_coords[:, None, :] - ref_coords[None, :, :]
+    pred_deltas = pred_coords[:, None, :] - pred_coords[None, :, :]
+    ref_distances = np.linalg.norm(ref_deltas, axis=2)
+    pred_distances = np.linalg.norm(pred_deltas, axis=2)
+
+    pair_mask = np.triu(ref_distances < cutoff, k=1)
+    n_pairs = int(pair_mask.sum())
+    if n_pairs == 0:
+        return empty_lddt_result("no reference C-alpha pairs within cutoff") | {"lddt_ca_cutoff": cutoff}
+
+    errors = np.abs(pred_distances[pair_mask] - ref_distances[pair_mask])
+    fractions = {
+        "lddt_ca_f_0p5": float(np.mean(errors < 0.5)),
+        "lddt_ca_f_1p0": float(np.mean(errors < 1.0)),
+        "lddt_ca_f_2p0": float(np.mean(errors < 2.0)),
+        "lddt_ca_f_4p0": float(np.mean(errors < 4.0)),
+    }
+    return {
+        "lddt_ca": float(0.25 * sum(fractions.values())),
+        "lddt_ca_n_pairs": n_pairs,
+        "lddt_ca_cutoff": cutoff,
+        **fractions,
+        "lddt_ca_error": "",
+    }
+
+
 def empty_diagnostics() -> dict[str, object]:
     return {
         "match_mode": "",
@@ -210,6 +284,8 @@ def main() -> None:
     parser.add_argument("--output-suffix", default="")
     parser.add_argument("--config", default="configs/models.yaml")
     parser.add_argument("--only-enabled-models", action="store_true")
+    parser.add_argument("--lddt-cutoff", type=float, default=15.0)
+    parser.add_argument("--disable-lddt", action="store_true")
     args = parser.parse_args()
 
     reference = Path(args.reference)
@@ -234,6 +310,14 @@ def main() -> None:
         "missing_pred_resseq",
         "ca_rmsd",
         "z_rmsd",
+        "lddt_ca",
+        "lddt_ca_n_pairs",
+        "lddt_ca_cutoff",
+        "lddt_ca_f_0p5",
+        "lddt_ca_f_1p0",
+        "lddt_ca_f_2p0",
+        "lddt_ca_f_4p0",
+        "lddt_ca_error",
         "tmalign_available",
         "tmalign_bin",
         "tmalign_rmsd",
@@ -287,10 +371,26 @@ def main() -> None:
                     "model": model_dir.name,
                     "prediction": pdb.name,
                     **empty_diagnostics(),
+                    **(empty_lddt_result("disabled" if args.disable_lddt else str(e)) | {"lddt_ca_cutoff": args.lddt_cutoff}),
                     **tmalign_result,
                     "error": str(e),
                 })
                 continue
+
+            if args.disable_lddt:
+                lddt_result = empty_lddt_result("disabled")
+            else:
+                try:
+                    lddt_result = lddt_ca_score(
+                        reference,
+                        pdb,
+                        args.ref_chain,
+                        args.pred_chain,
+                        args.match_mode,
+                        args.lddt_cutoff,
+                    )
+                except Exception as e:
+                    lddt_result = empty_lddt_result(str(e)) | {"lddt_ca_cutoff": args.lddt_cutoff}
 
             rows.append({
                 "target_id": args.target_id,
@@ -298,6 +398,7 @@ def main() -> None:
                 "prediction": pdb.name,
                 **diagnostics,
                 "z_rmsd": np.nan,
+                **lddt_result,
                 **tmalign_result,
                 "error": "",
             })
@@ -311,7 +412,11 @@ def main() -> None:
         if std > 0:
             df["z_rmsd"] = (df["ca_rmsd"] - mean) / std
 
-    df = df.sort_values(["ca_rmsd", "model", "prediction"], na_position="last")
+    df = df.sort_values(
+        ["lddt_ca", "tmalign_tm_score_ref", "tmalign_rmsd", "ca_rmsd", "model", "prediction"],
+        ascending=[False, False, True, True, True, True],
+        na_position="last",
+    )
 
     suffix = f"_{args.output_suffix}" if args.output_suffix else ""
     out_csv = outdir / f"{args.target_id}_scores{suffix}.csv"

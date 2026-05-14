@@ -46,15 +46,28 @@ Single-sequence language-model / sequence-only baselines:
 
 Current metrics:
 
+- lDDT-C-alpha
 - C-alpha RMSD
 - TM-align / US-align RMSD
 - TM-score normalized by reference length
 - TM-score normalized by prediction length
 - Aligned length
 
+Primary ranking metric:
+
+- lDDT-C-alpha, `lddt_ca`, higher is better
+
+Secondary ranking metric:
+
+- TM-score normalized by reference length, `tmalign_tm_score_ref`, higher is better
+
+Diagnostic metrics:
+
+- TM-align / US-align RMSD, `tmalign_rmsd`, lower is better
+- C-alpha RMSD, `ca_rmsd`, lower is better
+
 Future metrics:
 
-- lDDT-Ca
 - GDT_TS
 - Runtime
 - GPU memory

@@ -78,11 +78,19 @@ The scoring script supports:
    ```bash
    --use-tmalign --tmalign-bin auto
    ```
-4. TM-score normalized by reference length in `tmalign_tm_score_ref`.
-5. TM-score normalized by prediction length in `tmalign_tm_score_pred`.
-6. TM-align RMSD and aligned length in `tmalign_rmsd` and `tmalign_aligned_length`.
+4. C-alpha-only lDDT in `lddt_ca` using the matched C-alpha atoms and a default reference-distance cutoff of 15.0 A:
+   ```bash
+   --lddt-cutoff 15.0
+   ```
+5. Optional lDDT disabling for diagnostics:
+   ```bash
+   --disable-lddt
+   ```
+6. TM-score normalized by reference length in `tmalign_tm_score_ref`.
+7. TM-score normalized by prediction length in `tmalign_tm_score_pred`.
+8. TM-align RMSD and aligned length in `tmalign_rmsd` and `tmalign_aligned_length`.
 
-For benchmark comparison against one fixed reference, prefer `tmalign_tm_score_ref` as the primary metric.
+For benchmark comparison against one fixed reference, use `lddt_ca` as the primary metric and `tmalign_tm_score_ref` as the secondary metric. C-alpha RMSD remains a diagnostic metric.
 
 For canonical benchmark CSV generation, pass:
 
