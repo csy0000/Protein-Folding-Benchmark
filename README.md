@@ -17,15 +17,15 @@ Benchmark targets are listed in `data/targets/targets.csv`. The first two target
 
 The core benchmark scope is exactly these 9 backends:
 
-1. OpenFold (`openfold`)
-2. OpenFold3 (`openfold3`)
-3. Boltz-2 (`boltz2`)
-4. Chai-1 (`chai1`)
-5. ESMFold (`esmfold`)
-6. ColabFold (`colabfold`)
-7. AlphaFold2 (`alphafold2`)
-8. AlphaFold3 (`alphafold3`)
-9. OmegaFold (`omegafold`)
+1. ESMFold (`esmfold`)
+2. OmegaFold (`omegafold`)
+3. Chai-1 (`chai1`)
+4. Boltz-2 (`boltz2`)
+5. OpenFold (`openfold`)
+6. OpenFold3 (`openfold3`)
+7. ColabFold (`colabfold`)
+8. AlphaFold2 (`alphafold2`)
+9. AlphaFold3 (`alphafold3`)
 
 Model families:
 
@@ -33,7 +33,7 @@ Model families:
 - AF3-style / biomolecular family: AlphaFold3, OpenFold3, Boltz-2, Chai-1
 - Single-sequence language-model / sequence-only baselines: ESMFold, OmegaFold
 
-AlphaFold3 is included as a restricted-access baseline. Its inference code is available, but model parameters must be obtained under the applicable Google/DeepMind terms. Do not treat AlphaFold3 as equivalent to permissively licensed open-source models such as Chai-1 or Boltz-2.
+AlphaFold3 is included as a future optional restricted-access baseline and remains disabled by default. Its inference code is available, but model parameters and outputs are subject to the applicable Google/DeepMind terms, including non-commercial-use restrictions. Do not use AlphaFold3 for non-academic or commercial work unless rights, licensing, and any approved commercial route have been resolved.
 
 Exact license and usage terms should be checked from each upstream repository before publication, redistribution, or benchmark release.
 
@@ -178,20 +178,20 @@ python scripts/05_summarize_all_targets.py \
 
 ## Current Model Status
 
-The benchmark has currently been validated only with models that produced standardized `rank_*.pdb` files and were successfully read by the scoring script.
+The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquitin`. The benchmark has currently been validated only with models that produced standardized `rank_*.pdb` files and were successfully read by the scoring script.
 
-| Model | Backend ID | Environment | Runner | 1UAO test | Top-k generated | Notes |
-|---|---|---|---|---|---:|---|
-| OpenFold | `openfold` | `openfold` | `runners/run_openfold.sh` | not validated | 0 | AF2-style PyTorch implementation; runner placeholder unless already functional |
-| OpenFold3 | `openfold3` | `openfold3` | `runners/run_openfold3.sh` | not validated | 0 | AF3-style open implementation; setup pending |
-| Boltz-2 | `boltz2` | `boltz` | `runners/run_boltz2.sh` | passed | 5 | Current Boltz backend; uses genuine generated samples only |
-| Chai-1 | `chai1` | `chai1` | `runners/run_chai1.sh` | passed | 5 | Uses genuine generated samples only |
-| ESMFold | `esmfold` | `esmfold` | `runners/run_esmfold.sh` | passed | 1 | Deterministic/single-output baseline |
-| ColabFold | `colabfold` | `colabfold` | `runners/run_colabfold.sh` | not validated | 0 | AF2-style workflow; local DBs should not be downloaded unless explicitly requested |
-| AlphaFold2 | `alphafold2` | `alphafold2` | `runners/run_alphafold2.sh` | not validated | 0 | Canonical AF2 baseline; full databases not required for this project unless explicitly requested |
-| AlphaFold3 | `alphafold3` | `alphafold3` | `runners/run_alphafold3.sh` | not validated | 0 | Restricted-access baseline; weights require separate approval/terms |
-| OmegaFold | `omegafold` | `omegafold` | `runners/run_omegafold.sh` | passed | 1 | Single-sequence baseline currently kept in benchmark |
+| Model | Enabled | Validated on 1UAO | Validated on 1UBQ | Structures per target | Notes |
+|---|---|---|---|---:|---|
+| ESMFold (`esmfold`) | yes | yes | yes | 1 | Deterministic/single-output sequence baseline. |
+| OmegaFold (`omegafold`) | yes | yes | yes | 1 | Deterministic/single-output sequence baseline. |
+| Chai-1 (`chai1`) | yes | yes | yes | 5 | Uses genuine generated samples only. |
+| Boltz-2 (`boltz2`) | yes | yes | yes | 5 | Current Boltz backend; uses genuine generated samples only. |
+| OpenFold (`openfold`) | no | no | no | 0 | AF2-style PyTorch implementation; runner placeholder unless already functional. |
+| OpenFold3 (`openfold3`) | no | no | no | 0 | AF3-style open implementation; setup pending. |
+| ColabFold (`colabfold`) | yes | yes | yes | 5 | Runs `colabfold_batch` with `--msa-mode single_sequence`; no local sequence databases are required for the current smoke workflow. |
+| AlphaFold2 (`alphafold2`) | no | no | no | 0 | Canonical AF2 baseline; full databases not required for this project unless explicitly requested. |
+| AlphaFold3 (`alphafold3`) | no | no | no | 0 | Future optional restricted/non-commercial baseline; weights and outputs require separate terms review. |
 
 The old backend ID `boltz` is deprecated. `runners/run_boltz.sh` is retained only as a compatibility wrapper that delegates to `runners/run_boltz2.sh`.
 
-The current canonical Chignolin score output should contain 12 rows: ESMFold 1, OmegaFold 1, Chai-1 5, and Boltz-2 5.
+The current canonical score outputs should contain 17 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, and ColabFold 5. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.

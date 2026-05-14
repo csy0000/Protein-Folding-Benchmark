@@ -20,7 +20,7 @@ models:
     runner: bash runners/run_esmfold.sh
 
   colabfold:
-    enabled: false
+    enabled: true
     runner: bash runners/run_colabfold.sh
 
   alphafold2:

@@ -24,4 +24,4 @@ The benchmark backend ID is `boltz2`, but the current working conda environment 
 
 This policy avoids dependency conflicts between PyTorch, CUDA, JAX, OpenMM, NumPy, HH-suite, and model-specific packages. It also improves reproducibility, simplifies debugging, and lets one broken model be reinstalled without touching the full project.
 
-AlphaFold2 often requires JAX/CUDA-specific setup and model parameters. AlphaFold3 model parameters are restricted-access and must be obtained under the applicable terms. This project should not download full AlphaFold, AlphaFold3, ColabFold, or other large databases unless the user explicitly requests them.
+AlphaFold2 often requires JAX/CUDA-specific setup and model parameters. AlphaFold3 model parameters and outputs are restricted-access and subject to the applicable Google/DeepMind terms, including non-commercial-use restrictions; keep AlphaFold3 disabled unless the intended use has appropriate rights, licensing, and approval. This project should not download full AlphaFold, AlphaFold3, ColabFold, or other large databases unless the user explicitly requests them.

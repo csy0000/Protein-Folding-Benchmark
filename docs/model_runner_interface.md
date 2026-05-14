@@ -53,7 +53,8 @@ Current runner expectations:
 
 - Chai-1 and Boltz-2 may generate five genuine samples.
 - ESMFold and OmegaFold generally generate one prediction by default.
-- AlphaFold2, ColabFold, and OpenFold may produce multiple ranked outputs depending on configuration.
+- ColabFold currently produces five ranked outputs with the local `--msa-mode single_sequence` smoke configuration.
+- AlphaFold2 and OpenFold may produce multiple ranked outputs depending on configuration.
 - AlphaFold3 and OpenFold3 runner behavior is pending implementation.
 - `boltz2` is the canonical Boltz backend ID. The legacy `boltz` ID is deprecated, and `runners/run_boltz.sh` is kept only as a compatibility wrapper around `runners/run_boltz2.sh`.
 

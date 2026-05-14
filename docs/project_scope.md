@@ -6,21 +6,21 @@ The first debug target is Chignolin / `1UAO_chignolin`, using sequence `GYDPETGT
 
 The first larger single-chain protein benchmark target is ubiquitin / `1UBQ_ubiquitin`, using chain A from `1UBQ` and reference structure `data/references/1UBQ_chainA.pdb`.
 
-Benchmark targets are defined in `data/targets/targets.csv`.
+Benchmark targets are defined in `data/targets/targets.csv`. The current active target set is exactly these two targets.
 
 ## Benchmark Backends
 
 The benchmark scope is exactly 9 backend IDs:
 
-1. `openfold` - OpenFold
-2. `openfold3` - OpenFold3
-3. `boltz2` - Boltz-2
-4. `chai1` - Chai-1
-5. `esmfold` - ESMFold
-6. `colabfold` - ColabFold
-7. `alphafold2` - AlphaFold2
-8. `alphafold3` - AlphaFold3
-9. `omegafold` - OmegaFold
+1. `esmfold` - ESMFold
+2. `omegafold` - OmegaFold
+3. `chai1` - Chai-1
+4. `boltz2` - Boltz-2
+5. `openfold` - OpenFold
+6. `openfold3` - OpenFold3
+7. `colabfold` - ColabFold
+8. `alphafold2` - AlphaFold2
+9. `alphafold3` - AlphaFold3
 
 ## Model Families
 
@@ -71,3 +71,5 @@ Deterministic models must not duplicate one structure into multiple ranks. A sin
 `scripts/04_run_benchmark_targets.py` runs prediction, scoring, and per-target model summaries for every target in `data/targets/targets.csv`.
 
 `scripts/05_summarize_all_targets.py` aggregates per-target model summaries into `data/scores/all_targets_model_summary.csv` and `data/scores/all_targets_model_summary.md`.
+
+The current enabled and validated local backends are `esmfold`, `omegafold`, `chai1`, `boltz2`, and `colabfold`. AlphaFold3 remains disabled as a future optional restricted/non-commercial baseline; do not enable it until model parameter and output usage terms are resolved for the intended use.

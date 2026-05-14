@@ -2,7 +2,7 @@
 
 `data/targets/targets.csv` is the source of truth for benchmark targets.
 
-Current targets:
+Current targets, exactly:
 
 - Chignolin / `1UAO_chignolin`: 10-residue smoke-test peptide target.
 - Ubiquitin / `1UBQ_ubiquitin`: first larger single-chain protein benchmark target.
@@ -46,5 +46,7 @@ Expected output files include:
 - `data/scores/all_targets_model_summary.csv`
 - `data/scores/all_targets_model_summary.md`
 - `data/scores/benchmark_run_status.csv`
+
+Current canonical score CSVs contain 17 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, and ColabFold 5. The enabled validated model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, and `colabfold`.
 
 For every future Codex instruction, write a dated execution log under `codex-plan/` using the `YYYYMMDD_` filename prefix.
