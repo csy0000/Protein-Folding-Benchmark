@@ -6,6 +6,18 @@ Every model runner must accept:
 bash runners/run_MODEL.sh input.fasta output_dir top_k
 ```
 
+Backend IDs are:
+
+- `openfold`
+- `openfold3`
+- `boltz2`
+- `chai1`
+- `esmfold`
+- `colabfold`
+- `alphafold2`
+- `alphafold3`
+- `omegafold`
+
 Each runner must:
 
 1. Accept input FASTA, output directory, and `top_k`.
@@ -15,20 +27,68 @@ Each runner must:
    ```text
    rank_001.pdb
    rank_002.pdb
-   ...
+   rank_003.pdb
+   rank_004.pdb
+   rank_005.pdb
+   metadata.json
    ```
 5. Write `metadata.json`.
 
-Example metadata:
+Required metadata shape:
 
 ```json
 {
-  "model": "esmfold",
+  "model": "backend_id",
+  "environment": "conda_env_name",
   "top_k_requested": 5,
-  "top_k_generated": 1,
-  "environment": "esmfold",
-  "note": "This model generated one deterministic prediction."
+  "top_k_generated": 5,
+  "top_k_policy": "genuine generated samples only; no artificial duplication",
+  "source_files": []
 }
 ```
 
-For runners that are not yet configured, fail clearly with exit code `2` and point to `docs/model_installation_status.md`.
+`top_k` is a request, not a guarantee. Do not duplicate one deterministic structure into multiple `rank_*.pdb` files. `top_k_generated` must reflect the number of genuine structures the model produced.
+
+Current runner expectations:
+
+- Chai-1 and Boltz-2 may generate five genuine samples.
+- ESMFold and OmegaFold generally generate one prediction by default.
+- AlphaFold2, ColabFold, and OpenFold may produce multiple ranked outputs depending on configuration.
+- AlphaFold3 and OpenFold3 runner behavior is pending implementation.
+- `boltz2` is the canonical Boltz backend ID. The legacy `boltz` ID is deprecated, and `runners/run_boltz.sh` is kept only as a compatibility wrapper around `runners/run_boltz2.sh`.
+
+`scripts/standardize_structure_outputs.py` can be used by runners that emit PDB, CIF, or mmCIF files under a model-specific temporary directory. It converts or copies the first `top_k` discovered structures into standardized ranks and writes standardized metadata.
+
+For runners that are not yet configured, fail clearly with exit code `2` and point to `docs/model_installation_status.md` when useful.
+
+## Scoring Interface
+
+The scoring script supports:
+
+1. C-alpha RMSD using sequential residue order:
+   ```bash
+   --match-mode sequential
+   ```
+2. C-alpha RMSD using residue sequence numbers:
+   ```bash
+   --match-mode resseq
+   ```
+3. TM-align / US-align structural alignment:
+   ```bash
+   --use-tmalign --tmalign-bin auto
+   ```
+4. TM-score normalized by reference length in `tmalign_tm_score_ref`.
+5. TM-score normalized by prediction length in `tmalign_tm_score_pred`.
+6. TM-align RMSD and aligned length in `tmalign_rmsd` and `tmalign_aligned_length`.
+
+For benchmark comparison against one fixed reference, prefer `tmalign_tm_score_ref` as the primary metric.
+
+For canonical benchmark CSV generation, pass:
+
+```bash
+--config configs/models.yaml --only-enabled-models
+```
+
+This scores only enabled backend IDs from the config and warns about ignored stale prediction folders.
+
+All standardized `rank_*.pdb` files are scored individually in the raw score CSV. After that, `scripts/03_summarize_scores.py` aggregates the per-prediction rows into one row per model/backend and records the best prediction according to the configured ranking metrics.

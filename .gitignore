@@ -1,6 +1,7 @@
 # models are heavy
 models/
 weights/
+.cache/
 __pycache__/
 *.pyc
 

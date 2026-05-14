@@ -30,13 +30,19 @@ This repository is a local benchmark harness for protein folding models. Preserv
   conda activate ENV_NAME
   ```
 
-## Current Benchmark Target
+## Current Benchmark Targets
 
 ```text
 Target ID: 1UAO_chignolin
 PDB ID: 1UAO
 Sequence: GYDPETGTWG
 Reference structure: data/references/1UAO_model1_chainA.pdb
+Reference chain: A
+
+Target ID: 1UBQ_ubiquitin
+PDB ID: 1UBQ
+Sequence: MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG
+Reference structure: data/references/1UBQ_chainA.pdb
 Reference chain: A
 ```
 
@@ -48,6 +54,8 @@ Reference chain: A
 - Keep failed model predictions from crashing the entire pipeline.
 - Log each model run to `logs/{target_id}_{model}.log`.
 - Scoring scripts should preserve failed predictions in the output CSV with an `error` column.
+- Canonical benchmark scoring should use `--config configs/models.yaml --only-enabled-models` so stale or deprecated prediction folders are not included in score CSVs.
+- The canonical Boltz backend ID is `boltz2`; the old `boltz` ID is deprecated and should only appear as a compatibility wrapper or upstream repository/environment name.
 
 ## Mandatory Codex Execution Logs
 
@@ -57,10 +65,10 @@ For every Codex instruction or task, create a corresponding execution log under:
 codex-plan/
 ```
 
-The log filename should be based on the instruction name or purpose, for example:
+The log filename should have the execution date prepended in `YYYYMMDD_` format and be based on the instruction name or purpose, for example:
 
 ```text
-codex-plan/fix_esmfold_and_scoring_diagnostics.log
+codex-plan/20260514_add_1ubq_multitarget_benchmark.log
 ```
 
 Each log must include:

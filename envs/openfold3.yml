@@ -1,0 +1,16 @@
+name: openfold3
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - git
+  - wget
+  - numpy
+  - pandas
+  - biopython
+  - gemmi

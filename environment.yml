@@ -22,4 +22,5 @@ dependencies:
   - wget
   - curl
   - git
+  - tmalign
   - pip

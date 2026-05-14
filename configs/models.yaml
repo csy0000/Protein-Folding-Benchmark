@@ -1,19 +1,23 @@
 models:
+  openfold:
+    enabled: false
+    runner: bash runners/run_openfold.sh
+
+  openfold3:
+    enabled: false
+    runner: bash runners/run_openfold3.sh
+
+  boltz2:
+    enabled: true
+    runner: bash runners/run_boltz2.sh
+
+  chai1:
+    enabled: true
+    runner: bash runners/run_chai1.sh
+
   esmfold:
     enabled: true
     runner: bash runners/run_esmfold.sh
-
-  omegafold:
-    enabled: true
-    runner: bash runners/run_omegafold.sh
-
-  boltz:
-    enabled: false
-    runner: bash runners/run_boltz.sh
-
-  chai1:
-    enabled: false
-    runner: bash runners/run_chai1.sh
 
   colabfold:
     enabled: false
@@ -23,10 +27,10 @@ models:
     enabled: false
     runner: bash runners/run_alphafold2.sh
 
-  openfold:
+  alphafold3:
     enabled: false
-    runner: bash runners/run_openfold.sh
+    runner: bash runners/run_alphafold3.sh
 
-  rosettafold:
-    enabled: false
-    runner: bash runners/run_rosettafold.sh
+  omegafold:
+    enabled: true
+    runner: bash runners/run_omegafold.sh

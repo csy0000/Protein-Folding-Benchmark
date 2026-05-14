@@ -1,0 +1,14 @@
+name: alphafold3
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - git
+  - wget
+  - numpy
+  - pandas
+  - biopython
+  - gemmi
