@@ -38,7 +38,7 @@ python scripts/03_summarize_scores.py \
 
 For Chignolin, sequential C-alpha matching is preferred because some prediction tools may write arbitrary residue numbers. The scorer computes `lddt_ca` as a C-alpha-only, superposition-free local distance agreement metric. TM-align / US-align scoring is also available and writes `tmalign_tm_score_ref`, `tmalign_tm_score_pred`, `tmalign_rmsd`, and `tmalign_aligned_length`. Chignolin is a pipeline-debug target; lDDT-C-alpha, TM-score, and RMSD can be unstable for very short peptides.
 
-The current validated local configuration enables ESMFold, OmegaFold, Boltz-2, Chai-1, ColabFold, and OpenFold. ESMFold, OmegaFold, and OpenFold each produce one standardized prediction for this target in the current smoke configuration. Boltz-2, Chai-1, and ColabFold each produce five genuine ranked structures and record their raw source files in `metadata.json`; no top-k ranks are filled by duplicating one output.
+The current validated local configuration enables ESMFold, OmegaFold, Boltz-2, Chai-1, ColabFold, and OpenFold. ESMFold and OmegaFold each produce one standardized prediction by default. OpenFold has one existing scored smoke prediction for this target; fresh OpenFold runner calls now default to MSA mode and require configured databases. Boltz-2, Chai-1, and ColabFold each produce five genuine ranked structures and record their raw source files in `metadata.json`; no top-k ranks are filled by duplicating one output.
 
 Benchmark scoring should use `--config configs/models.yaml --only-enabled-models` so stale or deprecated prediction folders are ignored. The canonical Chignolin score CSV should contain 18 rows: ESMFold 1, OmegaFold 1, OpenFold 1, Chai-1 5, Boltz-2 5, and ColabFold 5.
 

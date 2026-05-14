@@ -35,9 +35,9 @@ Model families:
 
 AlphaFold3 is included as a future optional restricted-access baseline and remains disabled by default. Its inference code is available, but model parameters and outputs are subject to the applicable Google/DeepMind terms, including non-commercial-use restrictions. Do not use AlphaFold3 for non-academic or commercial work unless rights, licensing, and any approved commercial route have been resolved.
 
-OpenFold is included as an AF2-style backend and is enabled after a two-target smoke validation. The current benchmark runner uses single-sequence mode with AlphaFold-style parameters from `weights/colabfold/params`; full MSA/template OpenFold runs still require separate OpenFold-compatible databases supplied through `OPENFOLD_DATA_DIR` and related `OPENFOLD_*` environment variables. The benchmark does not download OpenFold sequence/template databases automatically.
+OpenFold is included as an AF2-style backend and is enabled after a two-target smoke validation. Existing OpenFold score rows come from prior single-sequence smoke outputs, but the runner now defaults to MSA mode for fresh predictions. MSA OpenFold runs require OpenFold/AlphaFold-compatible parameters, template mmCIFs, and sequence databases supplied through `OPENFOLD_DATA_DIR` and related `OPENFOLD_*` environment variables. The benchmark does not download OpenFold sequence/template databases automatically.
 
-Model-specific setup notes are in `docs/model_setup_notes.md`. The local OpenFold installation and smoke-run notes are in `models/openfold/README.md`; other backend status details are tracked in `docs/model_installation_status.md`.
+Model-specific setup notes are in `model-installation/`. Model source trees live under `models/`, which is ignored by Git, so reproducibility notes should be tracked outside model checkouts. Other backend status details are tracked in `docs/model_installation_status.md`.
 
 Exact license and usage terms should be checked from each upstream repository before publication, redistribution, or benchmark release.
 
@@ -188,7 +188,7 @@ The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquit
 | OmegaFold (`omegafold`) | yes | yes | yes | 1 | Deterministic/single-output sequence baseline. |
 | Chai-1 (`chai1`) | yes | yes | yes | 5 | Uses genuine generated samples only. |
 | Boltz-2 (`boltz2`) | yes | yes | yes | 5 | Current Boltz backend; uses genuine generated samples only. |
-| OpenFold (`openfold`) | yes | yes | yes | 1 | Single-sequence smoke mode using AlphaFold-style params from `weights/colabfold/params`; see `models/openfold/README.md`. |
+| OpenFold (`openfold`) | yes | yes | yes | 1 | Existing scored outputs are from single-sequence smoke validation; fresh runner default is MSA mode and requires configured databases. See `model-installation/openfold.md`. |
 | OpenFold3 (`openfold3`) | no | no | no | 0 | AF3-style open implementation; setup pending. |
 | ColabFold (`colabfold`) | yes | yes | yes | 5 | Runs `colabfold_batch` with `--msa-mode single_sequence`; no local sequence databases are required for the current smoke workflow. |
 | AlphaFold2 (`alphafold2`) | no | no | no | 0 | Canonical AF2 baseline; full databases not required for this project unless explicitly requested. |

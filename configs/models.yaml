@@ -4,10 +4,11 @@ models:
     runner: bash runners/run_openfold.sh
     env_name: openfold
     repo_dir: ${OPENFOLD_REPO:-models/openfold}
+    mode: ${OPENFOLD_MODE:-msa}
     params_dir: ${OPENFOLD_PARAMS_DIR:-weights/colabfold/params}
     data_dir: ${OPENFOLD_DATA_DIR:-work/openfold_inputs}
     output_subdir: openfold
-    notes: "OpenFold single-sequence smoke backend; uses AlphaFold params from weights/colabfold/params unless overridden."
+    notes: "OpenFold is enabled from existing scored smoke outputs. The runner now defaults to MSA mode and requires real OpenFold/AlphaFold-compatible databases for fresh predictions; set OPENFOLD_MODE=single_sequence only for explicit smoke tests."
 
   openfold3:
     enabled: false

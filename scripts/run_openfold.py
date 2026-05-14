@@ -12,6 +12,17 @@ from pathlib import Path
 
 
 PARAMETER_SUFFIXES = (".pt", ".pth", ".ckpt", ".npz")
+DATABASE_CANDIDATES = {
+    "uniref90": ("--uniref90_database_path", ("uniref90", "uniref90.fasta")),
+    "mgnify": ("--mgnify_database_path", ("mgnify", "mgy_clusters_2018_12.fa")),
+    "pdb70": ("--pdb70_database_path", ("pdb70", "pdb70")),
+    "pdb_seqres": ("--pdb_seqres_database_path", ("pdb_seqres", "pdb_seqres.txt")),
+    "uniref30": ("--uniref30_database_path", ("uniref30", "UniRef30_2021_03")),
+    "uniclust30": ("--uniclust30_database_path", ("uniclust30", "uniclust30_2018_08", "uniclust30_2018_08")),
+    "uniprot": ("--uniprot_database_path", ("uniprot", "uniprot.fasta")),
+    "bfd": ("--bfd_database_path", ("bfd", "bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt")),
+    "obsolete_pdbs": ("--obsolete_pdbs_path", ("pdb_mmcif", "obsolete.dat")),
+}
 
 
 def read_fasta_sequence(path: Path) -> tuple[str, str]:
@@ -99,21 +110,36 @@ def default_template_mmcif_dir(data_dir: Path, explicit_path: str | None) -> Pat
     raise SystemExit(f"No template mmCIF directory found under OPENFOLD_DATA_DIR: {data_dir}")
 
 
-def add_if_exists(cmd: list[str], flag: str, path: Path) -> None:
+def add_if_exists(cmd: list[str], flag: str, path: Path) -> bool:
     if path.exists():
         cmd.extend([flag, str(path)])
+        return True
+    return False
 
 
-def add_database_args(cmd: list[str], data_dir: Path) -> None:
-    add_if_exists(cmd, "--uniref90_database_path", data_dir / "uniref90" / "uniref90.fasta")
-    add_if_exists(cmd, "--mgnify_database_path", data_dir / "mgnify" / "mgy_clusters_2018_12.fa")
-    add_if_exists(cmd, "--pdb70_database_path", data_dir / "pdb70" / "pdb70")
-    add_if_exists(cmd, "--pdb_seqres_database_path", data_dir / "pdb_seqres" / "pdb_seqres.txt")
-    add_if_exists(cmd, "--uniref30_database_path", data_dir / "uniref30" / "UniRef30_2021_03")
-    add_if_exists(cmd, "--uniclust30_database_path", data_dir / "uniclust30" / "uniclust30_2018_08" / "uniclust30_2018_08")
-    add_if_exists(cmd, "--uniprot_database_path", data_dir / "uniprot" / "uniprot.fasta")
-    add_if_exists(cmd, "--bfd_database_path", data_dir / "bfd" / "bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt")
-    add_if_exists(cmd, "--obsolete_pdbs_path", data_dir / "pdb_mmcif" / "obsolete.dat")
+def add_database_args(cmd: list[str], data_dir: Path) -> set[str]:
+    found: set[str] = set()
+    for name, (flag, parts) in DATABASE_CANDIDATES.items():
+        if add_if_exists(cmd, flag, data_dir.joinpath(*parts)):
+            found.add(name)
+    return found
+
+
+def validate_msa_databases(data_dir: Path, found: set[str], preset: str) -> None:
+    required = {"uniref90", "mgnify", "pdb70"}
+    if preset == "full_dbs":
+        required.update({"bfd", "uniref30"})
+    missing = sorted(required - found)
+    if missing:
+        expected = "\n".join(
+            f"  {name}: {data_dir.joinpath(*DATABASE_CANDIDATES[name][1])}" for name in missing
+        )
+        raise SystemExit(
+            "OpenFold MSA mode requires database paths that were not found under "
+            f"OPENFOLD_DATA_DIR={data_dir}.\nMissing:\n{expected}\n"
+            "Provide the full OpenFold/AlphaFold database tree or run an explicit "
+            "single-sequence smoke test with --mode single_sequence."
+        )
 
 
 def structure_sort_key(path: Path) -> tuple[int, str]:
@@ -167,6 +193,7 @@ def main() -> None:
     parser.add_argument("--config-preset", default=os.environ.get("OPENFOLD_CONFIG_PRESET", "model_1"))
     parser.add_argument("--cpus", type=int, default=int(os.environ.get("OPENFOLD_CPUS", "4")))
     parser.add_argument("--preset", choices=["full_dbs", "reduced_dbs"], default=os.environ.get("OPENFOLD_DB_PRESET", "full_dbs"))
+    parser.add_argument("--mode", choices=["msa", "single_sequence"], default=os.environ.get("OPENFOLD_MODE", "msa"))
     parser.add_argument("--use-single-seq-mode", action="store_true")
     parser.add_argument("--skip-relaxation", action=argparse.BooleanOptionalAction, default=True)
     args = parser.parse_args()
@@ -197,6 +224,21 @@ def main() -> None:
         raise SystemExit(f"OpenFold inference script not found: {run_script}")
 
     parameter_file = find_parameter_file(params_dir, args.config_preset, args.param_path)
+    use_single_sequence = args.mode == "single_sequence" or args.use_single_seq_mode
+    found_databases: set[str] = set()
+    if args.use_precomputed_alignments and args.mode == "msa":
+        raise SystemExit(
+            "--use-precomputed-alignments is not accepted in OpenFold MSA mode. "
+            "Provide real database paths under OPENFOLD_DATA_DIR or set --mode single_sequence "
+            "for the smoke-test path."
+        )
+    if not args.use_precomputed_alignments and args.mode == "msa":
+        found_databases = {
+            name
+            for name, (_, parts) in DATABASE_CANDIDATES.items()
+            if data_dir.joinpath(*parts).exists()
+        }
+        validate_msa_databases(data_dir, found_databases, args.preset)
     template_mmcif_dir = default_template_mmcif_dir(data_dir, args.template_mmcif_dir)
 
     cmd = [
@@ -225,7 +267,7 @@ def main() -> None:
 
     if args.skip_relaxation:
         cmd.append("--skip_relaxation")
-    if args.use_single_seq_mode:
+    if use_single_sequence:
         cmd.append("--use_single_seq_mode")
     if args.use_precomputed_alignments:
         precomputed_alignments = Path(args.use_precomputed_alignments).expanduser().resolve()

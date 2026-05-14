@@ -2,7 +2,7 @@
 
 | Model | Backend ID | Environment | Repo path | Installed? | Runner exists? | Tested on 1UAO? | Top-k generated | Scoring succeeded? | Notes |
 |---|---|---|---|---|---|---|---:|---|---|
-| OpenFold | `openfold` | `openfold` | `models/openfold` | yes | yes | yes | 1 | yes | Enabled after two-target smoke validation. Runner uses single-sequence mode, `weights/colabfold/params/params_model_1.npz`, project-local precomputed-empty alignment directories, and OpenFold test mmCIFs. See `models/openfold/README.md`. |
+| OpenFold | `openfold` | `openfold` | `models/openfold` | yes | yes | yes | 1 | yes | Enabled after two-target smoke validation. Existing score rows come from prior single-sequence smoke outputs. The runner now defaults to MSA mode and requires configured databases for fresh prediction. See `model-installation/openfold.md`. |
 | OpenFold3 | `openfold3` | `openfold3` | `models/openfold-3` | repo cloned | yes | no | 0 | no | Placeholder environment and runner added; package installation and validation pending. |
 | Boltz-2 | `boltz2` | `boltz` | `models/boltz` | yes | yes | yes | 5 | yes | Current canonical Boltz backend. Runner uses `boltz predict` with five diffusion samples, CPU mode, disabled optional kernels, local model cache, and explicit single-sequence MSA mode. Legacy `runners/run_boltz.sh` is only a compatibility wrapper. |
 | Chai-1 | `chai1` | `chai1` | `models/chai-lab` | yes | yes | yes | 5 | yes | Runner uses `chai-lab fold` with five diffusion samples, CPU mode, local asset cache, and Chai-compatible FASTA headers. |
@@ -23,7 +23,7 @@ The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `col
 
 ## Optional OpenFold Setup
 
-OpenFold is present as an enabled single-sequence smoke backend. To reproduce or extend the installation, use the detailed local notes in `models/openfold/README.md`. The short setup outline is:
+OpenFold is present as an enabled backend with existing single-sequence smoke outputs for both active targets. To reproduce or extend the installation, use the tracked notes in `model-installation/openfold.md`. The short setup outline is:
 
 ```bash
 git clone https://github.com/aqlaboratory/openfold.git models/openfold
@@ -44,6 +44,6 @@ export OPENFOLD_PARAMS_DIR=/path/to/openfold_params
 export OPENFOLD_DATA_DIR=/path/to/openfold_databases
 ```
 
-The current smoke path has produced `rank_001.pdb` for both active targets and scoring succeeds. For full OpenFold inference, replace the smoke resources with real template/databases before drawing scientific conclusions.
+The current smoke path has produced `rank_001.pdb` for both active targets and scoring succeeds. Fresh runner invocations default to MSA mode; provide real template/databases before drawing scientific conclusions. Use `OPENFOLD_MODE=single_sequence` only for explicit smoke tests.
 
 AlphaFold3 remains disabled as a future restricted/non-commercial-use backend and should not be enabled until parameter and output usage terms are compatible with the intended use.

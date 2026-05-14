@@ -85,4 +85,4 @@ Deterministic models must not duplicate one structure into multiple ranks. A sin
 
 `scripts/05_summarize_all_targets.py` aggregates per-target model summaries into `data/scores/all_targets_model_summary.csv` and `data/scores/all_targets_model_summary.md`.
 
-The current enabled and validated local backends are `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`. OpenFold is validated in single-sequence smoke mode; full OpenFold MSA/template inference requires real OpenFold-compatible database paths. AlphaFold3 remains disabled as a future optional restricted/non-commercial baseline; do not enable it until model parameter and output usage terms are resolved for the intended use.
+The current enabled and validated local backends are `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`. OpenFold has existing scored single-sequence smoke outputs, and fresh OpenFold runner calls default to MSA mode with real OpenFold-compatible database paths required. AlphaFold3 remains disabled as a future optional restricted/non-commercial baseline; do not enable it until model parameter and output usage terms are resolved for the intended use.
