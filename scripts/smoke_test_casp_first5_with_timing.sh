@@ -40,7 +40,14 @@ import csv
 from pathlib import Path
 
 scores = sorted(Path("results/timing_smoke/scores").glob("*_scores.csv"))
-required = {"inference_time_sec", "inference_time_sec_per_prediction", "prediction_count"}
+required = {
+    "inference_time_sec",
+    "inference_time_sec_per_prediction",
+    "prediction_count",
+    "trials_run",
+    "max_trials",
+    "successful_trial",
+}
 if not scores:
     raise SystemExit("No score CSVs produced")
 for path in scores:

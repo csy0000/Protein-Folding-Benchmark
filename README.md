@@ -202,7 +202,7 @@ python scripts/run_benchmark_from_targets.py \
   --top-k 5
 ```
 
-Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, start/end timestamps, return code, command, and failure message when applicable.
+Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, retry-trial columns, return code, command, and failure message when applicable. The driver retries each target/model up to `--max-trials` times; the default is 5.
 
 Score the first-five benchmark with:
 
@@ -221,6 +221,9 @@ The scorer merges timing columns into each per-target score CSV when run metadat
 inference_time_sec
 inference_time_sec_per_prediction
 prediction_count
+trials_run
+max_trials
+successful_trial
 success
 return_code
 ```

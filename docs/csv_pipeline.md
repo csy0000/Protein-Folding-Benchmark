@@ -72,7 +72,9 @@ python scripts/score_benchmark_from_targets.py --targets data/targets/targets_fi
 Inference timing is written by `scripts/run_benchmark_from_targets.py` to
 `results/run_metadata.csv` by default, or to the path passed with
 `--run-metadata`. The scorer merges timing into per-target score CSVs when
-metadata are available.
+metadata are available. Model runs are retried up to `--max-trials` times per
+target/model; the default is 5. The run metadata records `trials_run`,
+`max_trials`, and `successful_trial` instead of start/end timestamps.
 
 For a fast end-to-end timing smoke test that avoids expensive model inference,
 use the mock runner path:

@@ -8,7 +8,7 @@ __pycache__/
 # data are heavy
 data/
 *.log
-results/
+results/timing_smoke/
 
 # codex files
 codex-plan/

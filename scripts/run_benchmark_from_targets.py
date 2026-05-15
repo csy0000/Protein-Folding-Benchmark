@@ -74,6 +74,9 @@ def write_prediction_metadata(
     status: str,
     mode: str,
     log_file: Path,
+    trials_run: int,
+    max_trials: int,
+    successful_trial: int | str,
     error: str = "",
 ) -> None:
     metadata = {
@@ -84,6 +87,9 @@ def write_prediction_metadata(
         "mode": mode,
         "status": status,
         "log_file": str(log_file),
+        "trials_run": trials_run,
+        "max_trials": max_trials,
+        "successful_trial": successful_trial,
         "notes": top_k_note(model),
         "error": error,
     }
@@ -108,15 +114,12 @@ METADATA_COLUMNS = [
     "inference_time_sec",
     "inference_time_sec_per_prediction",
     "prediction_count",
-    "started_at",
-    "finished_at",
+    "trials_run",
+    "max_trials",
+    "successful_trial",
     "command",
     "error_message",
 ]
-
-
-def iso_now() -> str:
-    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def rank_number(path: Path) -> int | str:
@@ -146,8 +149,9 @@ def timing_rows_for_run(
     success: bool,
     return_code: int,
     inference_time_sec: float,
-    started_at: str,
-    finished_at: str,
+    trials_run: int,
+    max_trials: int,
+    successful_trial: int | str,
     command: list[str],
     error_message: str,
 ) -> list[dict[str, object]]:
@@ -164,8 +168,9 @@ def timing_rows_for_run(
         "inference_time_sec": f"{inference_time_sec:.6f}",
         "inference_time_sec_per_prediction": f"{per_prediction:.6f}" if per_prediction != "" else "",
         "prediction_count": prediction_count,
-        "started_at": started_at,
-        "finished_at": finished_at,
+        "trials_run": trials_run,
+        "max_trials": max_trials,
+        "successful_trial": successful_trial,
         "command": " ".join(shlex.quote(part) for part in command),
         "error_message": error_message,
     }
@@ -188,18 +193,56 @@ def run_one(
     top_k: int,
     log_file: Path,
     env: dict[str, str],
-) -> tuple[str, str, int, float, str, str, list[str]]:
+    trial: int,
+    max_trials: int,
+) -> tuple[str, str, int, float, list[str]]:
     cmd = shlex.split(runner) + [str(fasta), str(model_out), str(top_k)]
-    started_at = iso_now()
     start = time.perf_counter()
-    with log_file.open("w") as log:
+    with log_file.open("a") as log:
+        log.write(f"[trial {trial}/{max_trials}]\n")
         log.write("$ " + " ".join(shlex.quote(part) for part in cmd) + "\n\n")
         completed = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, text=True, check=False, env=env)
+        log.write(f"\n[trial {trial}/{max_trials} exit_code={completed.returncode}]\n")
     inference_time_sec = time.perf_counter() - start
-    finished_at = iso_now()
     if completed.returncode == 0:
-        return "success", "", completed.returncode, inference_time_sec, started_at, finished_at, cmd
-    return "failed", f"exit code {completed.returncode}; see {log_file}", completed.returncode, inference_time_sec, started_at, finished_at, cmd
+        return "success", "", completed.returncode, inference_time_sec, cmd
+    return "failed", f"exit code {completed.returncode}; see {log_file}", completed.returncode, inference_time_sec, cmd
+
+
+def run_with_retries(
+    runner: str,
+    fasta: Path,
+    model_out: Path,
+    top_k: int,
+    log_file: Path,
+    env: dict[str, str],
+    max_trials: int,
+) -> tuple[str, str, int, float, int, int | str, list[str]]:
+    log_file.write_text("")
+    total_elapsed = 0.0
+    final_status = "failed"
+    final_error = ""
+    final_return_code = 1
+    final_cmd: list[str] = []
+    for trial in range(1, max_trials + 1):
+        status, error, return_code, elapsed, cmd = run_one(
+            runner,
+            fasta,
+            model_out,
+            top_k,
+            log_file,
+            env,
+            trial,
+            max_trials,
+        )
+        total_elapsed += elapsed
+        final_status = status
+        final_error = error
+        final_return_code = return_code
+        final_cmd = cmd
+        if status == "success":
+            return status, error, return_code, total_elapsed, trial, trial, cmd
+    return final_status, final_error, final_return_code, total_elapsed, max_trials, "", final_cmd
 
 
 def apply_gpu_defaults(model: str, env: dict[str, str]) -> None:
@@ -212,22 +255,20 @@ def run_mock(
     model_out: Path,
     log_file: Path,
     sleep_sec: float,
-) -> tuple[str, str, int, float, str, str, list[str]]:
+) -> tuple[str, str, int, float, list[str]]:
     cmd = ["mock-runner", target["target_id"], str(model_out), str(sleep_sec)]
-    started_at = iso_now()
     start = time.perf_counter()
     time.sleep(max(0.0, sleep_sec))
     model_out.mkdir(parents=True, exist_ok=True)
     for old_rank in model_out.glob("rank_*.pdb"):
         old_rank.unlink()
     reference = Path(target.get("reference_pdb", ""))
-    with log_file.open("w") as log:
+    with log_file.open("a") as log:
         log.write("$ " + " ".join(shlex.quote(part) for part in cmd) + "\n\n")
         if not reference.exists():
             elapsed = time.perf_counter() - start
-            finished_at = iso_now()
             log.write(f"Missing mock reference: {reference}\n")
-            return "failed", f"missing mock reference: {reference}", 1, elapsed, started_at, finished_at, cmd
+            return "failed", f"missing mock reference: {reference}", 1, elapsed, cmd
         copy2(reference, model_out / "rank_001.pdb")
         metadata = {
             "model": "mock",
@@ -240,8 +281,36 @@ def run_mock(
         (model_out / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
         log.write(f"Copied {reference} to {model_out / 'rank_001.pdb'}\n")
     elapsed = time.perf_counter() - start
-    finished_at = iso_now()
-    return "success", "", 0, elapsed, started_at, finished_at, cmd
+    return "success", "", 0, elapsed, cmd
+
+
+def run_mock_with_retries(
+    target: dict[str, str],
+    model_out: Path,
+    log_file: Path,
+    sleep_sec: float,
+    max_trials: int,
+) -> tuple[str, str, int, float, int, int | str, list[str]]:
+    log_file.write_text("")
+    total_elapsed = 0.0
+    final_status = "failed"
+    final_error = ""
+    final_return_code = 1
+    final_cmd: list[str] = []
+    for trial in range(1, max_trials + 1):
+        with log_file.open("a") as log:
+            log.write(f"[trial {trial}/{max_trials}]\n")
+        status, error, return_code, elapsed, cmd = run_mock(target, model_out, log_file, sleep_sec)
+        with log_file.open("a") as log:
+            log.write(f"\n[trial {trial}/{max_trials} exit_code={return_code}]\n")
+        total_elapsed += elapsed
+        final_status = status
+        final_error = error
+        final_return_code = return_code
+        final_cmd = cmd
+        if status == "success":
+            return status, error, return_code, total_elapsed, trial, trial, cmd
+    return final_status, final_error, final_return_code, total_elapsed, max_trials, "", final_cmd
 
 
 def main() -> None:
@@ -257,6 +326,7 @@ def main() -> None:
     parser.add_argument("--run-metadata", default="", help="Run timing metadata CSV. Defaults to <results-dir>/run_metadata.csv.")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-fast", action="store_true")
+    parser.add_argument("--max-trials", type=int, default=5, help="Maximum run attempts per target/model before marking it failed.")
     parser.add_argument("--mock-runner", action="store_true", help="Write mock rank_001 predictions from references to test timing plumbing.")
     parser.add_argument("--mock-sleep-sec", type=float, default=0.05)
     parser.add_argument(
@@ -266,6 +336,8 @@ def main() -> None:
         help="Default single_sequence avoids requiring full OpenFold MSA databases for the easy pipeline.",
     )
     args = parser.parse_args()
+    if args.max_trials < 1:
+        raise SystemExit("--max-trials must be at least 1")
 
     targets = load_targets(Path(args.targets))
     models = enabled_models(Path(args.config), args.models)
@@ -278,7 +350,7 @@ def main() -> None:
 
     failures = 0
     with run_log.open("w") as aggregate:
-        aggregate.write(f"targets={args.targets}\nmodels={','.join(models)}\ntop_k={args.top_k}\nrun_metadata={run_metadata}\n\n")
+        aggregate.write(f"targets={args.targets}\nmodels={','.join(models)}\ntop_k={args.top_k}\nmax_trials={args.max_trials}\nrun_metadata={run_metadata}\n\n")
         for target in targets:
             target_id = target["target_id"]
             fasta = Path(args.sequences_dir) / f"{target_id}.fasta"
@@ -302,22 +374,36 @@ def main() -> None:
 
                 print(f"[run] {target_id} {model_name}")
                 if args.mock_runner:
-                    status, error, return_code, elapsed, started_at, finished_at, cmd = run_mock(
+                    status, error, return_code, elapsed, trials_run, successful_trial, cmd = run_mock_with_retries(
                         target,
                         model_out,
                         log_file,
                         args.mock_sleep_sec,
+                        args.max_trials,
                     )
                 else:
-                    status, error, return_code, elapsed, started_at, finished_at, cmd = run_one(
+                    status, error, return_code, elapsed, trials_run, successful_trial, cmd = run_with_retries(
                         str(model_cfg["runner"]),
                         fasta,
                         model_out,
                         args.top_k,
                         log_file,
                         env,
+                        args.max_trials,
                     )
-                write_prediction_metadata(model_out, target_id, model_name, args.top_k, status, mode, log_file, error)
+                write_prediction_metadata(
+                    model_out,
+                    target_id,
+                    model_name,
+                    args.top_k,
+                    status,
+                    mode,
+                    log_file,
+                    trials_run,
+                    args.max_trials,
+                    successful_trial,
+                    error,
+                )
                 append_metadata_rows(
                     run_metadata,
                     timing_rows_for_run(
@@ -327,13 +413,14 @@ def main() -> None:
                         status == "success",
                         return_code,
                         elapsed,
-                        started_at,
-                        finished_at,
+                        trials_run,
+                        args.max_trials,
+                        successful_trial,
                         cmd,
                         error,
                     ),
                 )
-                aggregate.write(f"{target_id},{model_name},{status},{count_ranks(model_out)},{log_file},{error}\n")
+                aggregate.write(f"{target_id},{model_name},{status},{count_ranks(model_out)},{trials_run},{successful_trial},{log_file},{error}\n")
                 if status != "success":
                     failures += 1
                     print(f"[failed] {target_id} {model_name}: {error}", file=sys.stderr)

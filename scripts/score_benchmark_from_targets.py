@@ -15,6 +15,9 @@ TIMING_COLUMNS = [
     "inference_time_sec",
     "inference_time_sec_per_prediction",
     "prediction_count",
+    "trials_run",
+    "max_trials",
+    "successful_trial",
     "success",
     "return_code",
 ]
