@@ -19,11 +19,16 @@ mkdir -p "$TMP_DIR"
 export TORCH_HOME="${PWD}/weights/torch"
 mkdir -p "$TORCH_HOME"
 
+ESMFOLD_ARGS=()
+if [ "${ESMFOLD_CPU_ONLY:-1}" != "0" ]; then
+  ESMFOLD_ARGS+=(--cpu-only)
+fi
+
 # ESMFold normally gives one structure per sequence.
 python models/esmfold/scripts/fold.py \
   -i "$INPUT_FASTA" \
   -o "$TMP_DIR" \
-  --cpu-only
+  "${ESMFOLD_ARGS[@]}"
 
 PDB_FILE="$(find "$TMP_DIR" -name '*.pdb' | head -n 1)"
 

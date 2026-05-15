@@ -14,7 +14,14 @@ The runner uses local source under `models/esmfold`, sets `PYTHONPATH`, and
 calls:
 
 ```bash
-python models/esmfold/scripts/fold.py --cpu-only
+python models/esmfold/scripts/fold.py
+```
+
+The wrapper defaults to CPU-only mode by adding `--cpu-only`. For a CUDA smoke
+test, disable that flag:
+
+```bash
+ESMFOLD_CPU_ONLY=0 bash runners/run_esmfold.sh data/sequences/1UAO_chignolin.fasta /tmp/esmfold_gpu_test 1
 ```
 
 Smoke test:

@@ -37,6 +37,7 @@ PY
 
 export BOLTZ_CACHE="${PWD}/weights/boltz"
 export NUMBA_CACHE_DIR="${PWD}/.cache/numba"
+BOLTZ_ACCELERATOR="${BOLTZ_ACCELERATOR:-cpu}"
 mkdir -p "$BOLTZ_CACHE"
 mkdir -p "$NUMBA_CACHE_DIR"
 
@@ -45,7 +46,7 @@ boltz predict "$BOLTZ_FASTA" \
   --diffusion_samples "$TOP_K" \
   --max_parallel_samples "$TOP_K" \
   --output_format pdb \
-  --accelerator cpu \
+  --accelerator "$BOLTZ_ACCELERATOR" \
   --no_kernels \
   --override
 

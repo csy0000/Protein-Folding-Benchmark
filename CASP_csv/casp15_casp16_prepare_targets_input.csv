@@ -1,0 +1,56 @@
+PDBID,chain,description,enabled
+7ROA,A,casp_round=CASP15; target_id=T1104; target_length=117; size_bin=small; stoichiometry=A1; notes=EntV136,1
+7QIH,A,casp_round=CASP15; target_id=T1106s1; target_length=122; size_bin=small; stoichiometry=A1; notes=YscY-YscX subtarget s1 | duplicate_entry: casp_round=CASP15; target_id=T1106s2; target_length=114; size_bin=small; stoichiometry=A1; notes=YscY-YscX subtarget s2; verify chain/domain mapping,1
+8ORK,A,casp_round=CASP15; target_id=T1112; target_length=460; size_bin=large; stoichiometry=A1; notes=O93732.1,1
+7UYX,A,casp_round=CASP15; target_id=T1113; target_length=193; size_bin=medium; stoichiometry=A2; notes=gp2; homomeric/capri target,1
+7UTD,A,casp_round=CASP15; target_id=T1114s1; target_length=189; size_bin=medium; stoichiometry=A1; notes=A0QUM5/A0QUM6/A0QUM7 subtarget s1 | duplicate_entry: casp_round=CASP15; target_id=T1114s2; target_length=369; size_bin=medium; stoichiometry=A1; notes=A0QUM5/A0QUM6/A0QUM7 subtarget s2 | duplicate_entry: casp_round=CASP15; target_id=T1114s3; target_length=535; size_bin=large; stoichiometry=A1; notes=A0QUM5/A0QUM6/A0QUM7 subtarget s3,1
+7SQ4,A,casp_round=CASP15; target_id=T1119; target_length=153; size_bin=medium; stoichiometry=A3; notes=7sq4; homomeric/capri target,1
+7QVB,A,casp_round=CASP15; target_id=T1120; target_length=235; size_bin=medium; stoichiometry=A1; notes=DdrC,1
+7TIL,A,casp_round=CASP15; target_id=T1121; target_length=381; size_bin=medium; stoichiometry=A2; notes=JetD; homomeric/capri target,1
+8BBT,A,casp_round=CASP15; target_id=T1122; target_length=241; size_bin=medium; stoichiometry=A1; notes=A0A0B4VFQ3,1
+7UZT,A,casp_round=CASP15; target_id=T1123; target_length=266; size_bin=medium; stoichiometry=A2; notes=GenBank YP_002290968.1; homomeric/capri target,1
+7UX8,A,casp_round=CASP15; target_id=T1124; target_length=384; size_bin=medium; stoichiometry=A2; notes=MfnG/A0A0D4WTP2; ligand target,1
+8H2N,A,casp_round=CASP15; target_id=T1125; target_length=1200; size_bin=extra_large; stoichiometry=A1; notes=gp96RNAP,1
+8XBP,A,casp_round=CASP15; target_id=T1127; target_length=211; size_bin=medium; stoichiometry=A2; notes=Q9ZV05; ligand/capri target,1
+8A8C,A,casp_round=CASP15; target_id=T1129s2; target_length=640; size_bin=large; stoichiometry=A1; notes=P06971/P23207 subtarget s2,1
+8ECX,A,casp_round=CASP15; target_id=T1132; target_length=102; size_bin=small; stoichiometry=A6; notes=PA0709; homomeric/capri target,1
+8DYS,A,casp_round=CASP15; target_id=T1133; target_length=585; size_bin=large; stoichiometry=A1; notes=Q9BY44,1
+7UBZ,A,casp_round=CASP15; target_id=T1134s1; target_length=230; size_bin=medium; stoichiometry=A1; notes=TleTli subtarget s1 | duplicate_entry: casp_round=CASP15; target_id=T1134s2; target_length=313; size_bin=medium; stoichiometry=A1; notes=TleTli subtarget s2,1
+8FEF,A,casp_round=CASP15; target_id=T1137s1; target_length=409; size_bin=large; stoichiometry=A1; notes=MceG complex subtarget s1 | duplicate_entry: casp_round=CASP15; target_id=T1137s2; target_length=343; size_bin=medium; stoichiometry=A1; notes=MceG complex subtarget s2 | duplicate_entry: casp_round=CASP15; target_id=T1137s3; target_length=524; size_bin=large; stoichiometry=A1; notes=MceG complex subtarget s3 | duplicate_entry: casp_round=CASP15; target_id=T1137s4; target_length=547; size_bin=large; stoichiometry=A1; notes=MceG complex subtarget s4 | duplicate_entry: casp_round=CASP15; target_id=T1137s5; target_length=390; size_bin=medium; stoichiometry=A1; notes=MceG complex subtarget s5 | duplicate_entry: casp_round=CASP15; target_id=T1137s6; target_length=518; size_bin=large; stoichiometry=A1; notes=MceG complex subtarget s6 | duplicate_entry: casp_round=CASP15; target_id=T1137s7; target_length=653; size_bin=large; stoichiometry=A1; notes=MceG complex subtarget s7 | duplicate_entry: casp_round=CASP15; target_id=T1137s8; target_length=266; size_bin=medium; stoichiometry=A1; notes=MceG complex subtarget s8 | duplicate_entry: casp_round=CASP15; target_id=T1137s9; target_length=289; size_bin=medium; stoichiometry=A1; notes=MceG complex subtarget s9,1
+7UWW,A,casp_round=CASP15; target_id=T1145; target_length=635; size_bin=large; stoichiometry=A1; notes=Starch binding protein,1
+8EM5,A,casp_round=CASP15; target_id=T1147; target_length=103; size_bin=small; stoichiometry=A1; notes=KEK_05752/MmpS5,1
+8D5V,A,casp_round=CASP15; target_id=T1151s2; target_length=116; size_bin=small; stoichiometry=A1; notes=P9WF37 subtarget s2,1
+7R1L,A,casp_round=CASP15; target_id=T1152; target_length=56; size_bin=small; stoichiometry=A2; notes=Protein-carbohydrate complex; ligand target,1
+7ZCX,A,casp_round=CASP15; target_id=T1154; target_length=1424; size_bin=extra_large; stoichiometry=A1; notes=Q4J6E5 S-layer protein A,1
+8PBV,A,casp_round=CASP15; target_id=T1155; target_length=116; size_bin=small; stoichiometry=A1; notes=Uniprot Q8IN44,1
+8PKO,A,casp_round=CASP15; target_id=T1157s1; target_length=1029; size_bin=extra_large; stoichiometry=A1; notes=CtEDEM/CtPDI1P subtarget s1 | duplicate_entry: casp_round=CASP15; target_id=T1157s2; target_length=495; size_bin=large; stoichiometry=A1; notes=CtEDEM/CtPDI1P subtarget s2,1
+7PZT,A,casp_round=CASP15; target_id=T1159; target_length=160; size_bin=medium; stoichiometry=A1; notes=TecA tgat,1
+8JVN,A,casp_round=CASP15; target_id=T1160; target_length=48; size_bin=peptide_or_tiny; stoichiometry=A2; notes=mk2h_deltaMILPYS; tiny/homomeric/capri target,1
+8JVP,A,casp_round=CASP15; target_id=T1161; target_length=48; size_bin=peptide_or_tiny; stoichiometry=A2; notes=mk2h_deltaMILPYS_ph1; tiny/homomeric/capri target,1
+7PBR,A,casp_round=CASP15; target_id=T1170; target_length=318; size_bin=medium; stoichiometry=A6; notes=RuvB; ligand/homomeric/capri target,1
+8ON4,A,casp_round=CASP15; target_id=T1173; target_length=204; size_bin=medium; stoichiometry=A3; notes=Bd1334 Q6MNC5,1
+8OND,A,casp_round=CASP15; target_id=T1174; target_length=338; size_bin=medium; stoichiometry=A3; notes=Bd2133,1
+8SMQ,A,casp_round=CASP15; target_id=T1176; target_length=170; size_bin=medium; stoichiometry=A8; notes=idp97509,1
+8UFN,A,casp_round=CASP15; target_id=T1178; target_length=306; size_bin=medium; stoichiometry=A2; notes=GenBank ADH93577.1,1
+8TN8,A,casp_round=CASP15; target_id=T1179; target_length=261; size_bin=medium; stoichiometry=A2; notes=GenBank QBQ83077.1,1
+8IFX,A,casp_round=CASP15; target_id=T1183; target_length=200; size_bin=medium; stoichiometry=A1; notes=TsaB,1
+8AD2,A,casp_round=CASP15; target_id=T1187; target_length=166; size_bin=medium; stoichiometry=A2; notes=Q94EW1_TOBAC; ligand/capri target,1
+8C6Z,A,casp_round=CASP15; target_id=T1188; target_length=630; size_bin=large; stoichiometry=A1; notes=F8UNI4_CLOPF; ligand target,1
+8OKH,A,casp_round=CASP15; target_id=T1194; target_length=168; size_bin=medium; stoichiometry=A1; notes=Bd1399,1
+8QPQ,A,casp_round=CASP16; target_id=T1235; target_length=115; size_bin=small; stoichiometry=A6; notes=A0A410N6V5.2; homomeric/capri target | duplicate_entry: casp_round=CASP16; target_id=T1234; target_length=413; size_bin=large; stoichiometry=A3; notes=YP_010355913.1,1
+9FJL,A,casp_round=CASP16; target_id=T1299; target_length=168; size_bin=medium; stoichiometry=A1; notes=9FJL,1
+8BWD,A,casp_round=CASP16; target_id=T1201; target_length=210; size_bin=medium; stoichiometry=A2; notes=Q9GZX9; homomeric/capri target,1
+9F5M,A,casp_round=CASP16; target_id=T1280; target_length=237; size_bin=medium; stoichiometry=A1; notes=C-terminal domain of bacteriophage K gp155,1
+9CP0,A,casp_round=CASP16; target_id=T1206; target_length=237; size_bin=medium; stoichiometry=A2; notes=Porcine astrovirus 4 capsid spike,1
+9C3C,A,casp_round=CASP16; target_id=T1272s9; target_length=238; size_bin=medium; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s9 | duplicate_entry: casp_round=CASP16; target_id=T1272s7; target_length=242; size_bin=medium; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s7 | duplicate_entry: casp_round=CASP16; target_id=T1272s4; target_length=289; size_bin=medium; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s4 | duplicate_entry: casp_round=CASP16; target_id=T1272s5; target_length=291; size_bin=medium; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s5 | duplicate_entry: casp_round=CASP16; target_id=T1272s3; target_length=318; size_bin=medium; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s3 | duplicate_entry: casp_round=CASP16; target_id=T1272s2; target_length=363; size_bin=medium; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s2 | duplicate_entry: casp_round=CASP16; target_id=T1272s6; target_length=624; size_bin=large; stoichiometry=A1; notes=Dystrophin-glycoprotein complex subtarget s6,1
+8QFB,A,casp_round=CASP16; target_id=T1266; target_length=336; size_bin=medium; stoichiometry=A1; notes=Q99549,1
+9SFA,A,casp_round=CASP16; target_id=T1298; target_length=342; size_bin=medium; stoichiometry=A2; notes=Cyclic nucleotide-binding protein,1
+9N8W,A,casp_round=CASP16; target_id=T1227s1; target_length=427; size_bin=large; stoichiometry=A1; notes=LetA/LetB subtarget s1,1
+9B0L,A,casp_round=CASP16; target_id=T1212; target_length=466; size_bin=large; stoichiometry=A1; notes=Fanzor2 ternary structure; protein subunit of M1212,1
+9FYA,A,casp_round=CASP16; target_id=T1249v1; target_length=488; size_bin=large; stoichiometry=A3; notes=Arenaviral spike complex,1
+9FYG,A,casp_round=CASP16; target_id=T1249v2; target_length=488; size_bin=large; stoichiometry=A3; notes=Arenaviral spike complex,1
+9DXD,A,casp_round=CASP16; target_id=T1239v1; target_length=620; size_bin=large; stoichiometry=A1; notes=SPbeta_intRDF_DNA; protein subunit of M1239v1 | duplicate_entry: casp_round=CASP16; target_id=T1239v2; target_length=620; size_bin=large; stoichiometry=A1; notes=SPbeta_intRDF_DNA; protein subunit of M1239v2,1
+9C4O,A,casp_round=CASP16; target_id=T1214; target_length=677; size_bin=large; stoichiometry=A1; notes=YncD; ligand/ensemble target,1
+9GVQ,A,casp_round=CASP16; target_id=T1269; target_length=1410; size_bin=extra_large; stoichiometry=A1; notes=MUC5AC | duplicate_entry: casp_round=CASP16; target_id=T1269v1; target_length=1410; size_bin=extra_large; stoichiometry=An; notes=MUC5AC ensemble variant,1
+9H1G,A,casp_round=CASP16; target_id=T1220s1; target_length=1711; size_bin=extra_large; stoichiometry=A1; notes=BoDV-1 replication complex subtarget s1,1
+9ENR,A,casp_round=CASP16; target_id=T1210; target_length=1770; size_bin=extra_large; stoichiometry=A1; notes=Q868N5,1

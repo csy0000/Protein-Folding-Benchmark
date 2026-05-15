@@ -53,12 +53,13 @@ PY
 
 export MPLCONFIGDIR="${PWD}/.cache/matplotlib"
 export CHAI_DOWNLOADS_DIR="${PWD}/weights/chai1"
+CHAI1_DEVICE="${CHAI1_DEVICE:-cpu}"
 mkdir -p "$MPLCONFIGDIR"
 mkdir -p "$CHAI_DOWNLOADS_DIR"
 
 chai-lab fold "$CHAI_FASTA" "$TMP_DIR" \
   --num-diffn-samples "$TOP_K" \
-  --device cpu
+  --device "$CHAI1_DEVICE"
 
 python scripts/standardize_structure_outputs.py \
   --input-dir "$TMP_DIR" \

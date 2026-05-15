@@ -8,6 +8,7 @@ __pycache__/
 # data are heavy
 data/
 *.log
+results/
 
 # codex files
 codex-plan/

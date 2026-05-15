@@ -13,7 +13,13 @@ bash runners/run_boltz2.sh input.fasta output_dir top_k
 The runner calls:
 
 ```bash
-boltz predict input_boltz.fasta --diffusion_samples TOP_K --max_parallel_samples TOP_K --output_format pdb --accelerator cpu --no_kernels --override
+boltz predict input_boltz.fasta --diffusion_samples TOP_K --max_parallel_samples TOP_K --output_format pdb --accelerator "$BOLTZ_ACCELERATOR" --no_kernels --override
+```
+
+`BOLTZ_ACCELERATOR` defaults to `cpu`. For a CUDA smoke test, run:
+
+```bash
+BOLTZ_ACCELERATOR=gpu bash runners/run_boltz2.sh data/sequences/1UAO_chignolin.fasta /tmp/boltz2_gpu_test 1
 ```
 
 Smoke test:

@@ -53,6 +53,7 @@ Reference chain: A
 - Emit clear error messages.
 - Keep failed model predictions from crashing the entire pipeline.
 - Log each model run to `logs/{target_id}_{model}.log`.
+- Record inference timing metadata for model runs when using `scripts/run_benchmark_from_targets.py`; keep timing in seconds and merge it into score CSVs when available.
 - Scoring scripts should preserve failed predictions in the output CSV with an `error` column.
 - Canonical benchmark scoring should use `--config configs/models.yaml --only-enabled-models` so stale or deprecated prediction folders are not included in score CSVs.
 - The canonical Boltz backend ID is `boltz2`; the old `boltz` ID is deprecated and should only appear as a compatibility wrapper or upstream repository/environment name.

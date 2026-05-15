@@ -13,7 +13,13 @@ bash runners/run_chai1.sh input.fasta output_dir top_k
 The runner calls:
 
 ```bash
-chai-lab fold input_chai1.fasta tmp_chai1 --num-diffn-samples TOP_K --device cpu
+chai-lab fold input_chai1.fasta tmp_chai1 --num-diffn-samples TOP_K --device "$CHAI1_DEVICE"
+```
+
+`CHAI1_DEVICE` defaults to `cpu`. For a CUDA smoke test, run:
+
+```bash
+CHAI1_DEVICE=cuda:0 bash runners/run_chai1.sh data/sequences/1UAO_chignolin.fasta /tmp/chai1_gpu_test 1
 ```
 
 Smoke test:

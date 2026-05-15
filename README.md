@@ -105,6 +105,163 @@ python scripts/02_score_predictions.py \
 
 Use `--config configs/models.yaml --only-enabled-models` for benchmark score generation. This prevents stale prediction folders, such as archived or deprecated backend IDs, from contaminating the canonical CSV.
 
+## CSV-Driven Benchmark Pipeline
+
+For a new benchmark batch, start from a small CSV with at least:
+
+```csv
+PDBID,chain
+1UAO,A
+1UBQ,A
+```
+
+Optional columns are `name`, `description`, `sequence`, `reference_path`, and `enabled`. `PDBID` is normalized to uppercase. Rows with `enabled=false` are skipped. Existing target IDs are preserved for known targets such as `1UAO_chignolin` and `1UBQ_ubiquitin`; otherwise target IDs default to `<PDBID>_chain<CHAIN>` or `<PDBID>_<name>`.
+
+If `sequence` is omitted, `scripts/prepare_targets_from_csv.py` first reuses an existing `data/targets/targets.csv` entry for that PDB/chain, then tries to extract sequence from a prepared reference PDB. It does not download large databases or silently fetch missing references. Provide `reference_path` for new targets, or prepare the reference file first.
+
+Example input:
+
+```text
+examples/example_targets.csv
+```
+
+Four-command workflow:
+
+```bash
+python scripts/prepare_targets_from_csv.py \
+  --input-csv examples/example_targets.csv \
+  --output-targets data/targets/targets.csv \
+  --references-dir data/references \
+  --sequences-dir data/sequences
+
+python scripts/run_benchmark_from_targets.py \
+  --targets data/targets/targets.csv \
+  --config configs/models.yaml \
+  --top-k 5
+
+python scripts/score_benchmark_from_targets.py \
+  --targets data/targets/targets.csv \
+  --config configs/models.yaml \
+  --top-k 5
+
+python scripts/05_summarize_all_targets.py \
+  --targets data/targets/targets.csv \
+  --scores-dir data/scores \
+  --out-csv data/scores/all_targets_model_summary.csv \
+  --out-md data/scores/all_targets_model_summary.md
+```
+
+Current enabled working models are `boltz2`, `chai1`, `esmfold`, `colabfold`, `omegafold`, and `openfold`. Expected top-k behavior:
+
+| Model | Current top-k behavior |
+|---|---|
+| `boltz2` | up to top 5 |
+| `chai1` | up to top 5 |
+| `colabfold` | up to top 5 |
+| `esmfold` | top 1 |
+| `omegafold` | top 1 |
+| `openfold` | top 1 in the current easy pipeline setup |
+
+The easy runner defaults OpenFold to explicit `OPENFOLD_MODE=single_sequence` so the general CSV pipeline does not require full OpenFold/AF2 MSA databases. True OpenFold MSA runs require external databases and template files; see `model-installation/openfold.md`. AlphaFold2, OpenFold3, and AlphaFold3 remain disabled/future backends.
+
+Open the notebook after scoring:
+
+```bash
+jupyter notebook notebooks/benchmark_analysis.ipynb
+```
+
+## CASP15/CASP16 Smoke Test
+
+The CASP input table is:
+
+```text
+CASP_csv/casp15_casp16_prepare_targets_input.csv
+```
+
+Before launching a large CASP15/CASP16 benchmark, run the first-five target preparation smoke test:
+
+```bash
+bash scripts/smoke_test_prepare_casp_first5.sh
+```
+
+This creates:
+
+```text
+CASP_csv/casp15_casp16_prepare_targets_input_first5.csv
+data/targets/targets_first5.csv
+data/references/<target_id>.pdb
+data/sequences/<target_id>.fasta
+```
+
+Run the enabled models on the first-five target table with:
+
+```bash
+python scripts/run_benchmark_from_targets.py \
+  --targets data/targets/targets_first5.csv \
+  --config configs/models.yaml \
+  --top-k 5
+```
+
+Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, start/end timestamps, return code, command, and failure message when applicable.
+
+Score the first-five benchmark with:
+
+```bash
+python scripts/score_benchmark_from_targets.py \
+  --targets data/targets/targets_first5.csv \
+  --config configs/models.yaml \
+  --top-k 5 \
+  --results-dir results \
+  --use-tmalign
+```
+
+The scorer merges timing columns into each per-target score CSV when run metadata are available:
+
+```text
+inference_time_sec
+inference_time_sec_per_prediction
+prediction_count
+success
+return_code
+```
+
+To test the timing/reporting plumbing without expensive model inference, run:
+
+```bash
+bash scripts/smoke_test_casp_first5_with_timing.sh
+```
+
+This writes mock predictions, timing metadata, timed score CSVs, and an executed notebook under `results/timing_smoke/` and `/tmp/benchmark_analysis_timing_smoke.ipynb`.
+
+For full CASP target preparation, fetch references first, then prepare the target metadata:
+
+```bash
+python scripts/fetch_reference_pdbs.py \
+  --input-csv CASP_csv/casp15_casp16_prepare_targets_input.csv \
+  --references-dir data/references
+
+python prepare_targets_from_csv.py \
+  --input-csv CASP_csv/casp15_casp16_prepare_targets_input.csv \
+  --output-targets data/targets/targets.csv \
+  --references-dir data/references \
+  --sequences-dir data/sequences \
+  --overwrite
+```
+
+The notebook defaults to `data/targets/targets_first5.csv` when it exists and discovers score CSVs under `data/scores`. Override these paths when needed:
+
+```bash
+TARGETS_CSV=data/targets/targets_first5.csv RESULTS_DIR=data/scores \
+  jupyter notebook notebooks/benchmark_analysis.ipynb
+```
+
+For timed smoke-test outputs:
+
+```bash
+TARGETS_CSV=data/targets/targets_first5.csv RESULTS_DIR=results/timing_smoke/scores \
+  jupyter notebook notebooks/benchmark_analysis.ipynb
+```
+
 ## Scoring and Ranking
 
 The benchmark now records both local and global structural metrics.
@@ -195,5 +352,15 @@ The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquit
 | AlphaFold3 (`alphafold3`) | no | no | no | 0 | Future optional restricted/non-commercial baseline; weights and outputs require separate terms review. |
 
 The old backend ID `boltz` is deprecated. `runners/run_boltz.sh` is retained only as a compatibility wrapper that delegates to `runners/run_boltz2.sh`.
+
+GPU defaults and smoke notes:
+
+- `scripts/run_benchmark_from_targets.py` now defaults backend runs to GPU where supported by injecting `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0` unless the caller already set those variables.
+- Boltz-2 Chignolin CUDA smoke passed with `BOLTZ_ACCELERATOR=gpu`.
+- Chai-1 Chignolin CUDA smoke passed with `CHAI1_DEVICE=cuda:0`.
+- ESMFold Chignolin CUDA smoke passed with `ESMFOLD_CPU_ONLY=0`.
+- OpenFold CUDA smoke passed with `OPENFOLD_MODE=single_sequence OPENFOLD_DEVICE=cuda:0`.
+- OmegaFold's environment sees CUDA through PyTorch and its Chignolin smoke prediction completed successfully.
+- ColabFold CUDA smoke now passes after installing `jax[cuda12]==0.5.3`; its JAX stack reports `CudaDevice(id=0)` and the Chignolin run logs `Running on GPU`.
 
 The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.

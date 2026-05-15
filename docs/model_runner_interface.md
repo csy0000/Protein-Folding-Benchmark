@@ -102,7 +102,12 @@ Optional environment variables:
 - `OPENFOLD_MODE=single_sequence`: explicit smoke-test mode.
 - `OPENFOLD_PRECOMPUTED_ALIGNMENTS`: precomputed alignment directory, accepted only for explicit single-sequence smoke mode in the project wrapper.
 - `OPENFOLD_CONFIG_PRESET`: OpenFold config preset, default `model_1`.
-- `OPENFOLD_DEVICE`: torch device, default `cpu`.
+- `OPENFOLD_DEVICE`: torch device, default `cuda:0` in the runner.
+
+The higher-level CSV benchmark driver, `scripts/run_benchmark_from_targets.py`,
+also injects GPU defaults for supported backends unless the caller has already
+set the corresponding environment variable: `BOLTZ_ACCELERATOR=gpu`,
+`CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0`.
 
 Raw OpenFold outputs are written under `output_dir/raw/`, and genuine PDB outputs are copied to `rank_001.pdb`, `rank_002.pdb`, and so on. The runner does not duplicate outputs to satisfy `top_k`. If required MSA databases are absent, the wrapper fails before inference and leaves existing standardized predictions in place.
 
