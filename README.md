@@ -39,6 +39,8 @@ OpenFold is included as an AF2-style backend and is enabled after a two-target s
 
 Model-specific setup notes are in `model-installation/`. Model source trees live under `models/`, which is ignored by Git, so reproducibility notes should be tracked outside model checkouts. Other backend status details are tracked in `docs/model_installation_status.md`.
 
+For the current project handoff, installation status, smoke-test commands, and known model caveats, start with `docs/project_handoff_20260515.md`. Shared AlphaFold2/OpenFold database requirements are tracked in `model-installation/shared_af2_databases.md`; these large databases are not downloaded by this repository.
+
 Exact license and usage terms should be checked from each upstream repository before publication, redistribution, or benchmark release.
 
 ## Environment Policy
@@ -202,7 +204,7 @@ python scripts/run_benchmark_from_targets.py \
   --top-k 5
 ```
 
-Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, retry-trial columns, return code, command, and failure message when applicable. The driver retries each target/model up to `--max-trials` times; the default is 5.
+Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, retry-trial columns, return code, command, and failure message when applicable. The driver retries each target/model up to `--max-trials` times; the default is 5. It runs `colabfold` and `openfold` before the other enabled models and waits 5 seconds after each target/model run by default (`--gpu-cleanup-sleep-sec 5`) so GPU memory has time to settle.
 
 Score the first-five benchmark with:
 
@@ -359,6 +361,7 @@ The old backend ID `boltz` is deprecated. `runners/run_boltz.sh` is retained onl
 GPU defaults and smoke notes:
 
 - `scripts/run_benchmark_from_targets.py` now defaults backend runs to GPU where supported by injecting `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0` unless the caller already set those variables.
+- The benchmark driver runs `colabfold` and `openfold` before other enabled models and applies a 5-second post-run GPU cooldown by default.
 - Boltz-2 Chignolin CUDA smoke passed with `BOLTZ_ACCELERATOR=gpu`.
 - Chai-1 Chignolin CUDA smoke passed with `CHAI1_DEVICE=cuda:0`.
 - ESMFold Chignolin CUDA smoke passed with `ESMFOLD_CPU_ONLY=0`.

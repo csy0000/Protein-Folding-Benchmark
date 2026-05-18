@@ -18,12 +18,18 @@ import yaml
 
 
 SINGLE_OUTPUT_MODELS = {"esmfold", "omegafold", "openfold"}
+MODEL_ORDER_PRIORITY = ["colabfold", "openfold"]
 
 GPU_DEFAULT_ENV = {
     "boltz2": {"BOLTZ_ACCELERATOR": "gpu"},
     "chai1": {"CHAI1_DEVICE": "cuda:0"},
     "esmfold": {"ESMFOLD_CPU_ONLY": "0"},
     "openfold": {"OPENFOLD_DEVICE": "cuda:0"},
+}
+
+CONSERVATIVE_GPU_ENV = {
+    "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+    "TF_FORCE_GPU_ALLOW_GROWTH": "true",
 }
 
 
@@ -51,6 +57,17 @@ def enabled_models(config_path: Path, requested: str) -> dict[str, dict[str, obj
         if disabled:
             print(f"WARNING: requested disabled model(s) skipped: {', '.join(disabled)}", file=sys.stderr)
     return models
+
+
+def order_models(models: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    priority = {name: index for index, name in enumerate(MODEL_ORDER_PRIORITY)}
+    original_order = {name: index for index, name in enumerate(models)}
+    return dict(
+        sorted(
+            models.items(),
+            key=lambda item: (priority.get(item[0], len(priority)), original_order[item[0]]),
+        )
+    )
 
 
 def write_fasta(target_id: str, sequence: str, output: Path) -> None:
@@ -246,8 +263,18 @@ def run_with_retries(
 
 
 def apply_gpu_defaults(model: str, env: dict[str, str]) -> None:
+    for key, value in CONSERVATIVE_GPU_ENV.items():
+        env.setdefault(key, value)
     for key, value in GPU_DEFAULT_ENV.get(model, {}).items():
         env.setdefault(key, value)
+
+
+def post_model_gpu_cleanup(sleep_sec: float, aggregate, target_id: str, model: str) -> None:
+    if sleep_sec <= 0:
+        return
+    aggregate.write(f"[gpu-cleanup] {target_id},{model},sleep_sec={sleep_sec:g}\n")
+    aggregate.flush()
+    time.sleep(sleep_sec)
 
 
 def run_mock(
@@ -327,6 +354,12 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-fast", action="store_true")
     parser.add_argument("--max-trials", type=int, default=5, help="Maximum run attempts per target/model before marking it failed.")
+    parser.add_argument(
+        "--gpu-cleanup-sleep-sec",
+        type=float,
+        default=5.0,
+        help="Cooldown after each target/model run so exited CUDA/JAX/PyTorch processes can release GPU memory. Set 0 to disable.",
+    )
     parser.add_argument("--mock-runner", action="store_true", help="Write mock rank_001 predictions from references to test timing plumbing.")
     parser.add_argument("--mock-sleep-sec", type=float, default=0.05)
     parser.add_argument(
@@ -338,9 +371,11 @@ def main() -> None:
     args = parser.parse_args()
     if args.max_trials < 1:
         raise SystemExit("--max-trials must be at least 1")
+    if args.gpu_cleanup_sleep_sec < 0:
+        raise SystemExit("--gpu-cleanup-sleep-sec must be non-negative")
 
     targets = load_targets(Path(args.targets))
-    models = enabled_models(Path(args.config), args.models)
+    models = order_models(enabled_models(Path(args.config), args.models))
     logs_dir = Path(args.logs_dir)
     logs_dir.mkdir(parents=True, exist_ok=True)
     run_log = logs_dir / f"{datetime.now():%Y%m%d}_run_benchmark_from_targets.log"
@@ -350,7 +385,15 @@ def main() -> None:
 
     failures = 0
     with run_log.open("w") as aggregate:
-        aggregate.write(f"targets={args.targets}\nmodels={','.join(models)}\ntop_k={args.top_k}\nmax_trials={args.max_trials}\nrun_metadata={run_metadata}\n\n")
+        aggregate.write(
+            f"targets={args.targets}\n"
+            f"models={','.join(models)}\n"
+            f"model_order_priority={','.join(MODEL_ORDER_PRIORITY)}\n"
+            f"top_k={args.top_k}\n"
+            f"max_trials={args.max_trials}\n"
+            f"gpu_cleanup_sleep_sec={args.gpu_cleanup_sleep_sec:g}\n"
+            f"run_metadata={run_metadata}\n\n"
+        )
         for target in targets:
             target_id = target["target_id"]
             fasta = Path(args.sequences_dir) / f"{target_id}.fasta"
@@ -421,6 +464,7 @@ def main() -> None:
                     ),
                 )
                 aggregate.write(f"{target_id},{model_name},{status},{count_ranks(model_out)},{trials_run},{successful_trial},{log_file},{error}\n")
+                post_model_gpu_cleanup(args.gpu_cleanup_sleep_sec, aggregate, target_id, model_name)
                 if status != "success":
                     failures += 1
                     print(f"[failed] {target_id} {model_name}: {error}", file=sys.stderr)

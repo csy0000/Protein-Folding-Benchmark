@@ -47,6 +47,12 @@ ColabFold uses its CUDA-enabled JAX environment and OmegaFold uses its backend
 auto-detection. To force a CPU run for a specific backend, set the corresponding
 environment variable before launching the benchmark.
 
+The driver runs `colabfold` and `openfold` before the other enabled backends, so
+the AF2-style/JAX-heavy jobs run before later PyTorch backends add memory
+pressure. After each target/model run, it waits 5 seconds by default
+(`--gpu-cleanup-sleep-sec 5`) to give exited CUDA/JAX/PyTorch processes time to
+release GPU memory. Set `--gpu-cleanup-sleep-sec 0` to disable this cooldown.
+
 Analyze outputs with:
 
 ```bash

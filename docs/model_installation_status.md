@@ -19,7 +19,7 @@ Ubiquitin / `1UBQ_ubiquitin` has also been run for the currently enabled validat
 - `data/scores/1UBQ_ubiquitin_scores.csv`
 - `data/scores/1UBQ_ubiquitin_model_summary.csv`
 
-The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`. `scripts/run_benchmark_from_targets.py` defaults these runs to GPU where supported by injecting `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0` unless the caller already set those variables. The current canonical score CSVs contain 18 rows per target, include lDDT-C-alpha columns from `scripts/02_score_predictions.py`, and rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. The cross-target summary is `data/scores/all_targets_model_summary.csv`.
+The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`. `scripts/run_benchmark_from_targets.py` defaults these runs to GPU where supported by injecting `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0` unless the caller already set those variables. The driver runs `colabfold` and `openfold` before other enabled models and waits 5 seconds after each target/model run by default to let GPU memory settle. The current canonical score CSVs contain 18 rows per target, include lDDT-C-alpha columns from `scripts/02_score_predictions.py`, and rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. The cross-target summary is `data/scores/all_targets_model_summary.csv`.
 
 ## Optional OpenFold Setup
 

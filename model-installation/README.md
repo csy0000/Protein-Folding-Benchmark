@@ -4,6 +4,9 @@ Model source trees are expected under `models/`, but that directory is ignored
 by Git. Keep tracked setup notes here so the benchmark is reproducible without
 committing source checkouts, model weights, generated predictions, or databases.
 
+For a current handoff across installation status, smoke tests, model caveats,
+and next steps, see [`docs/project_handoff_20260515.md`](../docs/project_handoff_20260515.md).
+
 Each backend note should cover:
 
 - benchmark backend name from `configs/models.yaml`
@@ -29,6 +32,10 @@ Future or disabled backends:
 - [`alphafold3`](alphafold3.md)
 - [`openfold3`](openfold3.md)
 
+Shared AlphaFold2/OpenFold MSA/template database requirements are documented in
+[`shared_af2_databases.md`](shared_af2_databases.md). Keep those large database
+trees outside this repository.
+
 For the CSV-driven benchmark pipeline, use:
 
 ```bash
@@ -40,3 +47,6 @@ python scripts/score_benchmark_from_targets.py --targets data/targets/targets.cs
 The CSV benchmark driver defaults model runs to GPU where supported by setting
 `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and
 `OPENFOLD_DEVICE=cuda:0` unless those variables are already set.
+It runs `colabfold` and `openfold` before the other enabled models and waits 5
+seconds after each target/model run by default; use `--gpu-cleanup-sleep-sec` to
+tune or disable that cooldown.

@@ -14,6 +14,19 @@ conda activate omegafold
 TMP_DIR="${OUTPUT_DIR}/tmp_omegafold"
 mkdir -p "$TMP_DIR"
 
+python - <<'PY'
+import numpy as np
+
+major = int(np.__version__.split(".")[0])
+if major >= 2:
+    raise SystemExit(
+        "OmegaFold requires numpy<2 because its PyTorch/OmegaFold binary stack "
+        f"may segfault with NumPy {np.__version__}. Fix with: "
+        'conda activate omegafold && pip install "numpy==1.26.4" --force-reinstall'
+    )
+print("OmegaFold NumPy check OK", np.__version__)
+PY
+
 omegafold "$INPUT_FASTA" "$TMP_DIR"
 
 PDB_FILE="$(find "$TMP_DIR" -name '*.pdb' | head -n 1)"

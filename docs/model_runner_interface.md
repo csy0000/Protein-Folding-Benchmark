@@ -108,6 +108,8 @@ The higher-level CSV benchmark driver, `scripts/run_benchmark_from_targets.py`,
 also injects GPU defaults for supported backends unless the caller has already
 set the corresponding environment variable: `BOLTZ_ACCELERATOR=gpu`,
 `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0`.
+It also runs `colabfold` and `openfold` before other enabled backends and waits
+after each target/model run; tune that with `--gpu-cleanup-sleep-sec`.
 
 Raw OpenFold outputs are written under `output_dir/raw/`, and genuine PDB outputs are copied to `rank_001.pdb`, `rank_002.pdb`, and so on. The runner does not duplicate outputs to satisfy `top_k`. If required MSA databases are absent, the wrapper fails before inference and leaves existing standardized predictions in place.
 
