@@ -108,6 +108,10 @@ def extract_rank(prediction: object) -> int | None:
     return int(match.group(1))
 
 
+def parse_model_list(models: str) -> list[str]:
+    return [name.strip() for name in models.split(",") if name.strip()]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score all benchmark targets and generate target/all-target summaries.")
     parser.add_argument("--targets", default="data/targets/targets.csv")
@@ -118,6 +122,7 @@ def main() -> None:
     parser.add_argument("--results-dir", default="results")
     parser.add_argument("--run-metadata", default="", help="Run metadata CSV with inference timing. Defaults to <results-dir>/run_metadata.csv.")
     parser.add_argument("--match-mode", choices=["sequential", "resseq"], default="sequential")
+    parser.add_argument("--models", default="", help="Comma-separated enabled model IDs to score.")
     parser.add_argument("--use-tmalign", action="store_true", default=True)
     parser.add_argument("--no-tmalign", action="store_false", dest="use_tmalign")
     parser.add_argument("--fail-fast", action="store_true")
@@ -127,6 +132,7 @@ def main() -> None:
     scores_dir.mkdir(parents=True, exist_ok=True)
     run_metadata_path = Path(args.run_metadata) if args.run_metadata else Path(args.results_dir) / "run_metadata.csv"
     run_metadata = load_run_metadata(run_metadata_path)
+    requested_models = parse_model_list(args.models)
     failures = 0
 
     for target in load_targets(Path(args.targets)):
@@ -161,6 +167,8 @@ def main() -> None:
             "--outdir",
             str(scores_dir),
         ]
+        if requested_models:
+            score_cmd.extend(["--models", ",".join(requested_models)])
         if args.use_tmalign:
             score_cmd.append("--use-tmalign")
         ok, error = run_command(score_cmd)

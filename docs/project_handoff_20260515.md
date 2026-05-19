@@ -78,8 +78,8 @@ python scripts/score_benchmark_from_targets.py \
   --use-tmalign
 ```
 
-The scorer merges timing and retry metadata from `results/run_metadata.csv`
-when available, including:
+The benchmark driver writes detailed timing and retry metadata to
+`results/run_metadata.csv` when available, including:
 
 ```text
 inference_time_sec
@@ -213,6 +213,8 @@ Checks:
 conda run -n boltz boltz --help
 BOLTZ_ACCELERATOR=gpu bash runners/run_boltz2.sh data/sequences/1UAO_chignolin.fasta /tmp/boltz2_test 5
 ```
+
+2026-05-19 new-machine validation: Boltz-2 was installed into the separate `boltz` environment from `models/boltz` and passed the 7ROA real-controller smoke with `top_k=1`; combined real smoke for `esmfold,omegafold,boltz2` is recorded under `results/real_backend_smoke/`.
 
 ### Chai-1
 
@@ -348,8 +350,8 @@ Rules:
 - Represent missing or failed predictions in downstream analysis as missing
   data, not zero-quality structures.
 
-Future TODO: add a dedicated `data/run_status.csv` if users need a compact run
-status table separate from timing metadata. Suggested columns:
+The benchmark driver also writes a compact run status table to
+`data/run_status.csv` by default, or to `--run-status` when supplied. Columns:
 
 ```text
 target_id,pdb_id,chain,model,status,exit_code,runtime_sec,log_file,reason

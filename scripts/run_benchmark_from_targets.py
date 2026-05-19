@@ -138,6 +138,18 @@ METADATA_COLUMNS = [
     "error_message",
 ]
 
+RUN_STATUS_COLUMNS = [
+    "target_id",
+    "pdb_id",
+    "chain",
+    "model",
+    "status",
+    "exit_code",
+    "runtime_sec",
+    "log_file",
+    "reason",
+]
+
 
 def rank_number(path: Path) -> int | str:
     try:
@@ -157,6 +169,16 @@ def append_metadata_rows(path: Path, rows: list[dict[str, object]]) -> None:
             writer.writeheader()
         for row in rows:
             writer.writerow({column: row.get(column, "") for column in METADATA_COLUMNS})
+
+
+def append_run_status_row(path: Path, row: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    exists = path.exists()
+    with path.open("a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=RUN_STATUS_COLUMNS)
+        if not exists:
+            writer.writeheader()
+        writer.writerow({column: row.get(column, "") for column in RUN_STATUS_COLUMNS})
 
 
 def timing_rows_for_run(
@@ -201,6 +223,28 @@ def timing_rows_for_run(
         }
         for path in ranks
     ]
+
+
+def run_status_row_for_run(
+    target: dict[str, str],
+    model: str,
+    status: str,
+    return_code: int,
+    inference_time_sec: float,
+    log_file: Path,
+    error_message: str,
+) -> dict[str, object]:
+    return {
+        "target_id": target.get("target_id", ""),
+        "pdb_id": target.get("pdb_id", ""),
+        "chain": target.get("chain_id", ""),
+        "model": model,
+        "status": status,
+        "exit_code": return_code,
+        "runtime_sec": f"{inference_time_sec:.6f}",
+        "log_file": str(log_file),
+        "reason": error_message,
+    }
 
 
 def run_one(
@@ -351,6 +395,7 @@ def main() -> None:
     parser.add_argument("--logs-dir", default="logs")
     parser.add_argument("--results-dir", default="results")
     parser.add_argument("--run-metadata", default="", help="Run timing metadata CSV. Defaults to <results-dir>/run_metadata.csv.")
+    parser.add_argument("--run-status", default="", help="Compact run status CSV. Defaults to data/run_status.csv.")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-fast", action="store_true")
     parser.add_argument("--max-trials", type=int, default=5, help="Maximum run attempts per target/model before marking it failed.")
@@ -380,8 +425,11 @@ def main() -> None:
     logs_dir.mkdir(parents=True, exist_ok=True)
     run_log = logs_dir / f"{datetime.now():%Y%m%d}_run_benchmark_from_targets.log"
     run_metadata = Path(args.run_metadata) if args.run_metadata else Path(args.results_dir) / "run_metadata.csv"
+    run_status = Path(args.run_status) if args.run_status else Path("data/run_status.csv")
     if not args.dry_run and run_metadata.exists():
         run_metadata.unlink()
+    if not args.dry_run and run_status.exists():
+        run_status.unlink()
 
     failures = 0
     with run_log.open("w") as aggregate:
@@ -392,7 +440,8 @@ def main() -> None:
             f"top_k={args.top_k}\n"
             f"max_trials={args.max_trials}\n"
             f"gpu_cleanup_sleep_sec={args.gpu_cleanup_sleep_sec:g}\n"
-            f"run_metadata={run_metadata}\n\n"
+            f"run_metadata={run_metadata}\n"
+            f"run_status={run_status}\n\n"
         )
         for target in targets:
             target_id = target["target_id"]
@@ -463,6 +512,18 @@ def main() -> None:
                         error,
                     ),
                 )
+                append_run_status_row(
+                    run_status,
+                    run_status_row_for_run(
+                        target,
+                        model_name,
+                        status,
+                        return_code,
+                        elapsed,
+                        log_file,
+                        error,
+                    ),
+                )
                 aggregate.write(f"{target_id},{model_name},{status},{count_ranks(model_out)},{trials_run},{successful_trial},{log_file},{error}\n")
                 post_model_gpu_cleanup(args.gpu_cleanup_sleep_sec, aggregate, target_id, model_name)
                 if status != "success":
@@ -476,6 +537,7 @@ def main() -> None:
     print(f"Benchmark run log: {run_log}")
     if not args.dry_run:
         print(f"Run timing metadata: {run_metadata}")
+        print(f"Run status: {run_status}")
     if failures:
         print(f"Completed with {failures} model failure(s).")
 

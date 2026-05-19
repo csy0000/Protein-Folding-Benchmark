@@ -4,6 +4,7 @@ set -euo pipefail
 TARGETS_CSV="data/targets/targets_first5.csv"
 RESULTS_DIR="results/timing_smoke"
 RUN_METADATA="${RESULTS_DIR}/run_metadata.csv"
+RUN_STATUS="${RESULTS_DIR}/run_status.csv"
 SCORES_DIR="${RESULTS_DIR}/scores"
 PREDICTIONS_DIR="${RESULTS_DIR}/predictions"
 LOGS_DIR="${RESULTS_DIR}/logs"
@@ -20,10 +21,12 @@ conda run -n folding-benchmark python scripts/run_benchmark_from_targets.py \
   --logs-dir "${LOGS_DIR}" \
   --results-dir "${RESULTS_DIR}" \
   --run-metadata "${RUN_METADATA}" \
+  --run-status "${RUN_STATUS}" \
   --mock-runner \
   --mock-sleep-sec 0.02
 
 test -s "${RUN_METADATA}"
+test -s "${RUN_STATUS}"
 
 conda run -n folding-benchmark python scripts/score_benchmark_from_targets.py \
   --targets "${TARGETS_CSV}" \
@@ -56,7 +59,18 @@ for path in scores:
         missing = required - set(reader.fieldnames or [])
         if missing:
             raise SystemExit(f"{path} missing timing columns: {sorted(missing)}")
+status_path = Path("results/timing_smoke/run_status.csv")
+with status_path.open(newline="") as f:
+    reader = csv.DictReader(f)
+    required_status = {"target_id", "pdb_id", "chain", "model", "status", "exit_code", "runtime_sec", "log_file", "reason"}
+    missing = required_status - set(reader.fieldnames or [])
+    if missing:
+        raise SystemExit(f"{status_path} missing run status columns: {sorted(missing)}")
+    rows = list(reader)
+    if not rows:
+        raise SystemExit(f"{status_path} has no run status rows")
 print(f"Timing columns present in {len(scores)} score CSVs")
+print(f"Run status rows present: {len(rows)}")
 PY
 
 TARGETS_CSV="${TARGETS_CSV}" RESULTS_DIR="${SCORES_DIR}" \
@@ -68,4 +82,5 @@ TARGETS_CSV="${TARGETS_CSV}" RESULTS_DIR="${SCORES_DIR}" \
 
 echo "Timing smoke test complete"
 echo "Run metadata: ${RUN_METADATA}"
+echo "Run status: ${RUN_STATUS}"
 echo "Scores dir: ${SCORES_DIR}"

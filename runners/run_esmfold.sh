@@ -11,7 +11,7 @@ CONDA_BASE="$(conda info --base)"
 source "${CONDA_BASE}/etc/profile.d/conda.sh"
 conda activate esmfold
 
-export PYTHONPATH="${PWD}/models/esmfold${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${PWD}/models/esmfold:${PWD}/models/openfold${PYTHONPATH:+:${PYTHONPATH}}"
 
 TMP_DIR="${OUTPUT_DIR}/tmp_esmfold"
 mkdir -p "$TMP_DIR"

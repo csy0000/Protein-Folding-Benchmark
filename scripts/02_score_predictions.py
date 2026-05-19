@@ -266,6 +266,10 @@ def enabled_models_from_config(config_path: Path) -> list[str]:
     return [name for name, cfg in models.items() if cfg.get("enabled", False)]
 
 
+def parse_model_list(models: str) -> list[str]:
+    return [name.strip() for name in models.split(",") if name.strip()]
+
+
 def warn(message: str) -> None:
     print(f"WARNING: {message}", file=sys.stderr)
 
@@ -284,6 +288,7 @@ def main() -> None:
     parser.add_argument("--output-suffix", default="")
     parser.add_argument("--config", default="configs/models.yaml")
     parser.add_argument("--only-enabled-models", action="store_true")
+    parser.add_argument("--models", default="", help="Comma-separated model IDs to score, in config order where applicable.")
     parser.add_argument("--lddt-cutoff", type=float, default=15.0)
     parser.add_argument("--disable-lddt", action="store_true")
     args = parser.parse_args()
@@ -333,11 +338,18 @@ def main() -> None:
         model_dirs = []
     elif args.only_enabled_models:
         enabled_models = enabled_models_from_config(Path(args.config))
+        requested_models = parse_model_list(args.models)
+        if requested_models:
+            unknown = [name for name in requested_models if name not in enabled_models]
+            if unknown:
+                raise SystemExit(f"Requested model(s) are not enabled in {args.config}: {', '.join(unknown)}")
+            requested_names = set(requested_models)
+            enabled_models = [name for name in enabled_models if name in requested_names]
         active_names = set(enabled_models)
         all_dirs = sorted(path for path in pred_dir.iterdir() if path.is_dir())
         ignored_dirs = [path for path in all_dirs if path.name not in active_names]
         if ignored_dirs:
-            warn("Ignoring non-enabled prediction directories:")
+            warn("Ignoring prediction directories outside active model set:")
             for path in ignored_dirs:
                 print(f"  {path}", file=sys.stderr)
 

@@ -151,4 +151,12 @@ For canonical benchmark CSV generation, pass:
 
 This scores only enabled backend IDs from the config and warns about ignored stale prediction folders.
 
+For intentional subset smokes, add a comma-separated `--models` list to the scoring command, for example:
+
+```bash
+--config configs/models.yaml --only-enabled-models --models esmfold,omegafold
+```
+
+This keeps scoring aligned with the subset that was actually run and avoids warnings for other enabled backends.
+
 All standardized `rank_*.pdb` files are scored individually in the raw score CSV. After that, `scripts/03_summarize_scores.py` aggregates the per-prediction rows into one row per model/backend and records the best prediction according to the configured ranking metrics.

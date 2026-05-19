@@ -204,7 +204,7 @@ python scripts/run_benchmark_from_targets.py \
   --top-k 5
 ```
 
-Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, retry-trial columns, return code, command, and failure message when applicable. The driver retries each target/model up to `--max-trials` times; the default is 5. It runs `colabfold` and `openfold` before the other enabled models and waits 5 seconds after each target/model run by default (`--gpu-cleanup-sleep-sec 5`) so GPU memory has time to settle.
+Model inference timing is recorded in `results/run_metadata.csv` by default. Each generated `rank_*.pdb` gets one metadata row with wall-clock `inference_time_sec`, `inference_time_sec_per_prediction`, retry-trial columns, return code, command, and failure message when applicable. A compact target/model status table is also written to `data/run_status.csv` by default, or to `--run-status` when supplied. The driver retries each target/model up to `--max-trials` times; the default is 5. It runs `colabfold` and `openfold` before the other enabled models and waits 5 seconds after each target/model run by default (`--gpu-cleanup-sleep-sec 5`) so GPU memory has time to settle.
 
 Score the first-five benchmark with:
 
@@ -236,7 +236,15 @@ To test the timing/reporting plumbing without expensive model inference, run:
 bash scripts/smoke_test_casp_first5_with_timing.sh
 ```
 
-This writes mock predictions, timing metadata, timed score CSVs, and an executed notebook under `results/timing_smoke/` and `/tmp/benchmark_analysis_timing_smoke.ipynb`.
+This writes mock predictions, timing metadata, compact run status, timed score CSVs, and an executed notebook under `results/timing_smoke/` and `/tmp/benchmark_analysis_timing_smoke.ipynb`.
+
+To re-run the real one-target ESMFold/OmegaFold smoke with TM-score validation:
+
+```bash
+bash scripts/smoke_test_real_esmfold_omegafold_with_tmscore.sh
+```
+
+This writes real backend predictions and scores under `results/real_backend_smoke/`. The script uses `--models esmfold,omegafold` for both inference and scoring so intentionally omitted enabled backends do not produce warning noise. To include the now-validated Boltz-2 backend in the same smoke directory, run the controller/scorer with `--models esmfold,omegafold,boltz2`.
 
 For full CASP target preparation, fetch references first, then prepare the target metadata:
 
@@ -278,6 +286,8 @@ Primary ranking metric:
 Secondary ranking metric:
 
 - `tmalign_tm_score_ref`: TM-score from TM-align/US-align, normalized by the reference length. Higher is better.
+
+`folding-benchmark` includes the Bioconda `USalign` package on this machine, so `--use-tmalign --tmalign-bin auto` populates TM-score columns locally.
 
 Additional diagnostic metrics:
 

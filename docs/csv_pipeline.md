@@ -77,10 +77,12 @@ python scripts/score_benchmark_from_targets.py --targets data/targets/targets_fi
 
 Inference timing is written by `scripts/run_benchmark_from_targets.py` to
 `results/run_metadata.csv` by default, or to the path passed with
-`--run-metadata`. The scorer merges timing into per-target score CSVs when
-metadata are available. Model runs are retried up to `--max-trials` times per
-target/model; the default is 5. The run metadata records `trials_run`,
-`max_trials`, and `successful_trial` instead of start/end timestamps.
+`--run-metadata`. A compact target/model status table is written to
+`data/run_status.csv` by default, or to the path passed with `--run-status`.
+The scorer merges timing into per-target score CSVs when metadata are
+available. Model runs are retried up to `--max-trials` times per target/model;
+the default is 5. The run metadata records `trials_run`, `max_trials`, and
+`successful_trial` instead of start/end timestamps.
 
 For a fast end-to-end timing smoke test that avoids expensive model inference,
 use the mock runner path:
@@ -93,9 +95,18 @@ This writes:
 
 ```text
 results/timing_smoke/run_metadata.csv
+results/timing_smoke/run_status.csv
 results/timing_smoke/scores/*_scores.csv
 /tmp/benchmark_analysis_timing_smoke.ipynb
 ```
+
+For the current real-backend ESMFold/OmegaFold smoke, including USalign-backed TM-score validation, run:
+
+```bash
+bash scripts/smoke_test_real_esmfold_omegafold_with_tmscore.sh
+```
+
+The script writes under `results/real_backend_smoke/` and passes `--models esmfold,omegafold` to both inference and scoring.
 
 For the full CASP table, fetch references before preparing targets:
 
