@@ -16,6 +16,8 @@ from pathlib import Path
 
 import yaml
 
+from carbon_tracking import CARBON_METADATA_COLUMNS, CarbonRunTracker, empty_carbon_metadata
+
 
 SINGLE_OUTPUT_MODELS = {"esmfold", "omegafold", "openfold"}
 MODEL_ORDER_PRIORITY = ["colabfold", "openfold"]
@@ -136,6 +138,7 @@ METADATA_COLUMNS = [
     "successful_trial",
     "command",
     "error_message",
+    *CARBON_METADATA_COLUMNS,
 ]
 
 RUN_STATUS_COLUMNS = [
@@ -193,6 +196,7 @@ def timing_rows_for_run(
     successful_trial: int | str,
     command: list[str],
     error_message: str,
+    carbon_metadata: dict[str, object] | None = None,
 ) -> list[dict[str, object]]:
     ranks = sorted(model_out.glob("rank_*.pdb")) if success else []
     prediction_count = len(ranks)
@@ -213,6 +217,9 @@ def timing_rows_for_run(
         "command": " ".join(shlex.quote(part) for part in command),
         "error_message": error_message,
     }
+    if carbon_metadata is None:
+        carbon_metadata = empty_carbon_metadata(False)
+    base.update(carbon_metadata)
     if not ranks:
         return [{**base, "rank": "", "output_pdb": ""}]
     return [
@@ -413,11 +420,22 @@ def main() -> None:
         default="single_sequence",
         help="Default single_sequence avoids requiring full OpenFold MSA databases for the easy pipeline.",
     )
+    parser.add_argument("--track-carbon", action="store_true", help="Track per-target/model emissions with CodeCarbon.")
+    parser.add_argument("--carbon-country-iso-code", default="CHE", help="Country ISO code for CodeCarbon offline tracking.")
+    parser.add_argument(
+        "--carbon-output-dir",
+        default="",
+        help="Directory for raw CodeCarbon CSVs. Defaults to <results-dir>/carbon.",
+    )
+    parser.add_argument("--carbon-project-name", default="protein_folding_benchmark")
+    parser.add_argument("--carbon-measure-power-secs", type=float, default=1.0)
     args = parser.parse_args()
     if args.max_trials < 1:
         raise SystemExit("--max-trials must be at least 1")
     if args.gpu_cleanup_sleep_sec < 0:
         raise SystemExit("--gpu-cleanup-sleep-sec must be non-negative")
+    if args.carbon_measure_power_secs <= 0:
+        raise SystemExit("--carbon-measure-power-secs must be positive")
 
     targets = load_targets(Path(args.targets))
     models = order_models(enabled_models(Path(args.config), args.models))
@@ -426,6 +444,7 @@ def main() -> None:
     run_log = logs_dir / f"{datetime.now():%Y%m%d}_run_benchmark_from_targets.log"
     run_metadata = Path(args.run_metadata) if args.run_metadata else Path(args.results_dir) / "run_metadata.csv"
     run_status = Path(args.run_status) if args.run_status else Path("data/run_status.csv")
+    carbon_output_dir = Path(args.carbon_output_dir) if args.carbon_output_dir else Path(args.results_dir) / "carbon"
     if not args.dry_run and run_metadata.exists():
         run_metadata.unlink()
     if not args.dry_run and run_status.exists():
@@ -441,7 +460,10 @@ def main() -> None:
             f"max_trials={args.max_trials}\n"
             f"gpu_cleanup_sleep_sec={args.gpu_cleanup_sleep_sec:g}\n"
             f"run_metadata={run_metadata}\n"
-            f"run_status={run_status}\n\n"
+            f"run_status={run_status}\n"
+            f"track_carbon={str(bool(args.track_carbon)).lower()}\n"
+            f"carbon_country_iso_code={args.carbon_country_iso_code}\n"
+            f"carbon_output_dir={carbon_output_dir}\n\n"
         )
         for target in targets:
             target_id = target["target_id"]
@@ -465,6 +487,15 @@ def main() -> None:
                     continue
 
                 print(f"[run] {target_id} {model_name}")
+                carbon_tracker = CarbonRunTracker(
+                    enabled=args.track_carbon,
+                    output_dir=carbon_output_dir,
+                    country_iso_code=args.carbon_country_iso_code,
+                    project_name=args.carbon_project_name,
+                    measure_power_secs=args.carbon_measure_power_secs,
+                    run_label=f"{target_id}_{model_name}",
+                )
+                carbon_tracker.start()
                 if args.mock_runner:
                     status, error, return_code, elapsed, trials_run, successful_trial, cmd = run_mock_with_retries(
                         target,
@@ -483,6 +514,7 @@ def main() -> None:
                         env,
                         args.max_trials,
                     )
+                carbon_metadata = carbon_tracker.stop()
                 write_prediction_metadata(
                     model_out,
                     target_id,
@@ -510,6 +542,7 @@ def main() -> None:
                         successful_trial,
                         cmd,
                         error,
+                        carbon_metadata,
                     ),
                 )
                 append_run_status_row(
