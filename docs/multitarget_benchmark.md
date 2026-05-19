@@ -49,7 +49,7 @@ Expected output files include:
 
 Current canonical score CSVs contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The enabled validated model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`.
 
-OpenFold's current score rows are retained from prior single-sequence smoke outputs. Fresh OpenFold runner calls default to MSA mode and require configured OpenFold/AlphaFold-compatible database paths; missing databases should be treated as a setup blocker, not as successful MSA inference.
+OpenFold's canonical two-target score rows are retained from prior single-sequence smoke outputs, and a fresh 7ROA single-sequence smoke passed on 2026-05-19 under `results/backend_smoke/openfold_single_sequence/`. Fresh OpenFold MSA-mode calls require configured OpenFold/AlphaFold-compatible database paths; missing databases should be treated as a setup blocker, not as successful MSA inference. A combined six-backend 7ROA smoke passed under `results/backend_smoke/six_backend_single_sequence/`.
 
 Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker.
 

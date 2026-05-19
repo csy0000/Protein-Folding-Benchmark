@@ -3,12 +3,43 @@
 Backend ID: `openfold`
 Environment: `openfold`
 Source checkout: `models/openfold`
-Status: enabled and scored from existing single-sequence smoke outputs; MSA mode runner now requires real databases and was not freshly validated because database paths are missing.
+Status: enabled and validated on 2026-05-19 for 7ROA single-sequence smoke and combined six-backend smoke. Full MSA mode still requires real OpenFold/AlphaFold-compatible databases and was not freshly validated.
 
 `models/` is ignored by Git, so keep durable benchmark instructions in this
 tracked file rather than only in `models/openfold/README.md`.
 
-## Patched Environment
+## Current Validated Setup (2026-05-19)
+
+This machine uses the existing ESMFold-compatible OpenFold checkout at commit `4b41059694619831a7db195b7e0988fc4ff3a307`. The environment was created from `models/openfold/environment.yml` as a separate `openfold` conda environment.
+
+```bash
+mamba env create -n openfold -f models/openfold/environment.yml
+mamba install -n openfold -c conda-forge "mkl<2024" --yes
+conda run -n openfold python -m pip install gemmi
+```
+
+The MKL pin fixes this old PyTorch import failure:
+
+```text
+ImportError: .../libtorch_cpu.so: undefined symbol: iJIT_NotifyEvent
+```
+
+The runner uses the source checkout directly through `scripts/run_openfold.py`; it does not require building the CUDA extension for the current single-sequence smoke path. The wrapper is compatible with both newer OpenFold checkouts that accept `--use_single_seq_mode` and this older checkout that relies on an empty precomputed alignment directory to create a dummy one-sequence MSA.
+
+Validation commands:
+
+```bash
+conda run -n openfold python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.device_count())"
+conda run -n openfold python -c "import sys; sys.path.insert(0, 'models/openfold'); import openfold; print('openfold import OK')"
+conda run -n openfold python models/openfold/run_pretrained_openfold.py --help
+```
+
+Fresh smoke outputs:
+
+- `results/backend_smoke/openfold_single_sequence/`
+- `results/backend_smoke/six_backend_single_sequence/`
+
+## Historical/Alternative Patched Environment
 
 The upstream `models/openfold/environment.yml` may use a different name, such
 as `openfold-env`. This benchmark uses:

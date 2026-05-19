@@ -1,0 +1,38 @@
+models:
+  openfold:
+    enabled: false
+    runner: bash runners/run_openfold.sh
+    env_name: openfold
+    repo_dir: ${OPENFOLD_REPO:-models/openfold}
+    mode: ${OPENFOLD_MODE:-msa}
+    params_dir: ${OPENFOLD_PARAMS_DIR:-weights/colabfold/params}
+    data_dir: ${OPENFOLD_DATA_DIR:-work/openfold_inputs}
+    output_subdir: openfold
+    notes: OpenFold is enabled from existing scored smoke outputs. The runner now
+      defaults to MSA mode and requires real OpenFold/AlphaFold-compatible databases
+      for fresh predictions; set OPENFOLD_MODE=single_sequence only for explicit smoke
+      tests.
+  openfold3:
+    enabled: false
+    runner: bash runners/run_openfold3.sh
+  boltz2:
+    enabled: true
+    runner: bash runners/run_boltz2.sh
+  chai1:
+    enabled: true
+    runner: bash runners/run_chai1.sh
+  esmfold:
+    enabled: true
+    runner: bash runners/run_esmfold.sh
+  colabfold:
+    enabled: false
+    runner: bash runners/run_colabfold.sh
+  alphafold2:
+    enabled: false
+    runner: bash runners/run_alphafold2.sh
+  alphafold3:
+    enabled: false
+    runner: bash runners/run_alphafold3.sh
+  omegafold:
+    enabled: true
+    runner: bash runners/run_omegafold.sh

@@ -1,0 +1,7 @@
+models:
+  colabfold:
+    enabled: true
+    runner: bash runners/run_colabfold.sh
+    env_name: colabfold
+    msa_mode: single_sequence
+    output_subdir: colabfold

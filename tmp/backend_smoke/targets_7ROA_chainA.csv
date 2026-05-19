@@ -1,0 +1,2 @@
+target_id,pdb_id,chain_id,sequence,reference_pdb,notes
+7ROA_chainA,7ROA,A,QLEDSEVEAVAKGLEEYANGVTEDNFKNYVKNNFAQQEISSVEEELNVNISDSCVANKIKDEFFAISISAIVKAAQKKAWKELAVTVLRFAKANGLKTNAIIVAGQLALWAVQCG,data/references/7ROA_chainA.pdb,casp_round=CASP15; target_id=T1104; target_length=117; size_bin=small; stoichiometry=A1; notes=EntV136

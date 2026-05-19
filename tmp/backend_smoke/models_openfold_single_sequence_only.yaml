@@ -1,0 +1,11 @@
+models:
+  openfold:
+    enabled: true
+    runner: bash runners/run_openfold.sh
+    env_name: openfold
+    repo_dir: models/openfold
+    mode: single_sequence
+    inference_mode: single_sequence
+    params_dir: weights/colabfold/params
+    data_dir: work/openfold_inputs
+    output_subdir: openfold

@@ -125,6 +125,13 @@ def add_database_args(cmd: list[str], data_dir: Path) -> set[str]:
     return found
 
 
+def script_accepts_flag(script_path: Path, flag: str) -> bool:
+    try:
+        return flag in script_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+
 def validate_msa_databases(data_dir: Path, found: set[str], preset: str) -> None:
     required = {"uniref90", "mgnify", "pdb70"}
     if preset == "full_dbs":
@@ -195,7 +202,8 @@ def main() -> None:
     parser.add_argument("--preset", choices=["full_dbs", "reduced_dbs"], default=os.environ.get("OPENFOLD_DB_PRESET", "full_dbs"))
     parser.add_argument("--mode", choices=["msa", "single_sequence"], default=os.environ.get("OPENFOLD_MODE", "msa"))
     parser.add_argument("--use-single-seq-mode", action="store_true")
-    parser.add_argument("--skip-relaxation", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--skip-relaxation", dest="skip_relaxation", action="store_true", default=True)
+    parser.add_argument("--no-skip-relaxation", dest="skip_relaxation", action="store_false")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir).resolve()
@@ -267,7 +275,7 @@ def main() -> None:
 
     if args.skip_relaxation:
         cmd.append("--skip_relaxation")
-    if use_single_sequence:
+    if use_single_sequence and script_accepts_flag(run_script, "--use_single_seq_mode"):
         cmd.append("--use_single_seq_mode")
     if args.use_precomputed_alignments:
         precomputed_alignments = Path(args.use_precomputed_alignments).expanduser().resolve()

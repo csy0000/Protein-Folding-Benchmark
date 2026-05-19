@@ -227,6 +227,8 @@ BOLTZ_ACCELERATOR=gpu bash runners/run_boltz2.sh data/sequences/1UAO_chignolin.f
   CSV benchmark driver injects this by default.
 - Detailed notes: [Chai-1 setup](../model-installation/chai1.md)
 
+2026-05-19 new-machine validation: Chai-1 was installed into the separate `chai1` environment from the pinned PyPI package `chai_lab==0.6.1` and passed the 7ROA real-controller smoke with `top_k=1`; combined real smoke for `esmfold,omegafold,boltz2,chai1` is recorded under `results/real_backend_smoke/`.
+
 ### ESMFold
 
 - Backend ID: `esmfold`
@@ -248,7 +250,9 @@ BOLTZ_ACCELERATOR=gpu bash runners/run_boltz2.sh data/sequences/1UAO_chignolin.f
   service and does not require a full local AF2/OpenFold database tree.
 - Public online MSA services are not appropriate for heavy or bulk benchmarking.
 - CUDA JAX support is installed via `jax[cuda12]==0.5.3`; sanity check with
-  `jax.devices()`.
+  `jax.devices()`. Fresh 7ROA GPU smoke passed on 2026-05-19 under
+  `results/backend_smoke/colabfold_single_sequence/` and in the combined
+  six-backend smoke directory.
 - Detailed notes: [ColabFold setup](../model-installation/colabfold.md)
 
 ### OmegaFold
@@ -283,19 +287,23 @@ Detailed notes: [OmegaFold setup](../model-installation/omegafold.md)
 - Backend ID: `openfold`
 - Environment: `openfold`
 - Source checkout: `models/openfold` (ignored by Git)
-- OpenFold was installed and compiled successfully.
-- `attn_core_inplace_cuda` import works.
+- OpenFold was installed into a separate Python 3.7/PyTorch 1.12 environment
+  from `models/openfold/environment.yml`. Pin `mkl<2024` to avoid
+  `libtorch_cpu.so: undefined symbol: iJIT_NotifyEvent`.
+- Install `gemmi` in the `openfold` environment for benchmark output
+  standardization.
 - `models/openfold/run_pretrained_openfold.py --help` works.
 - Current scored outputs are from single-sequence smoke mode unless metadata
-  explicitly proves a true MSA-mode run.
+  explicitly proves a true MSA-mode run. Fresh 7ROA single-sequence smoke
+  passed on 2026-05-19 under `results/backend_smoke/openfold_single_sequence/`
+  and in `results/backend_smoke/six_backend_single_sequence/`.
 - Full MSA mode is blocked by missing large AF2/OpenFold-compatible databases.
 - Detailed notes: [OpenFold setup](../model-installation/openfold.md)
 
 Important installation lessons are preserved in `model-installation/openfold.md`,
-including CUDA 12.1 PyTorch wheels, CUDA toolkit headers inside the environment,
-conda GCC/G++ compilers, `TORCH_CUDA_ARCH_LIST=8.9`, `pip install .
---no-build-isolation`, runtime `LD_LIBRARY_PATH` fixes, `cuda-python==12.1.0`,
-TensorRT, and Polygraphy.
+including the current old-checkout path using Python 3.7, PyTorch 1.12,
+`mkl<2024`, `gemmi`, and a wrapper compatibility guard for OpenFold versions
+that do not expose `--use_single_seq_mode`.
 
 Validation:
 
@@ -304,7 +312,7 @@ conda activate openfold
 cd /path/to/Protein-Folding-Benchmark
 export TORCH_LIB_DIR=$(python -c "import torch, os; print(os.path.join(os.path.dirname(torch.__file__), 'lib'))")
 export LD_LIBRARY_PATH="$TORCH_LIB_DIR:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
-python -c "import attn_core_inplace_cuda; print('OpenFold CUDA extension OK')"
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 python models/openfold/run_pretrained_openfold.py --help
 ```
 

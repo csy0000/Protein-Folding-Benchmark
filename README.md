@@ -244,7 +244,7 @@ To re-run the real one-target ESMFold/OmegaFold smoke with TM-score validation:
 bash scripts/smoke_test_real_esmfold_omegafold_with_tmscore.sh
 ```
 
-This writes real backend predictions and scores under `results/real_backend_smoke/`. The script uses `--models esmfold,omegafold` for both inference and scoring so intentionally omitted enabled backends do not produce warning noise. To include the now-validated Boltz-2 backend in the same smoke directory, run the controller/scorer with `--models esmfold,omegafold,boltz2`.
+This writes real backend predictions and scores under `results/real_backend_smoke/`. The script uses `--models esmfold,omegafold` for both inference and scoring so intentionally omitted enabled backends do not produce warning noise. To include the now-validated Boltz-2 and Chai-1 backends in the same smoke directory, run the controller/scorer with `--models esmfold,omegafold,boltz2,chai1`.
 
 For full CASP target preparation, fetch references first, then prepare the target metadata:
 
@@ -360,9 +360,9 @@ The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquit
 | OmegaFold (`omegafold`) | yes | yes | yes | 1 | Deterministic/single-output sequence baseline. |
 | Chai-1 (`chai1`) | yes | yes | yes | 5 | Uses genuine generated samples only. |
 | Boltz-2 (`boltz2`) | yes | yes | yes | 5 | Current Boltz backend; uses genuine generated samples only. |
-| OpenFold (`openfold`) | yes | yes | yes | 1 | Existing scored outputs are from single-sequence smoke validation; fresh runner default is MSA mode and requires configured databases. See `model-installation/openfold.md`. |
+| OpenFold (`openfold`) | yes | yes | yes | 1 | Single-sequence smoke validation passed again on 7ROA on 2026-05-19; full MSA mode still requires configured databases. See `model-installation/openfold.md`. |
 | OpenFold3 (`openfold3`) | no | no | no | 0 | AF3-style open implementation; setup pending. |
-| ColabFold (`colabfold`) | yes | yes | yes | 5 | Runs `colabfold_batch` with `--msa-mode single_sequence`; no local sequence databases are required for the current smoke workflow. |
+| ColabFold (`colabfold`) | yes | yes | yes | 5 | Single-sequence GPU smoke passed on 7ROA on 2026-05-19 using local AF2-PTM parameters; no local sequence databases are required for this smoke workflow. |
 | AlphaFold2 (`alphafold2`) | no | no | no | 0 | Canonical AF2 baseline; full databases not required for this project unless explicitly requested. |
 | AlphaFold3 (`alphafold3`) | no | no | no | 0 | Future optional restricted/non-commercial baseline; weights and outputs require separate terms review. |
 
@@ -375,8 +375,8 @@ GPU defaults and smoke notes:
 - Boltz-2 Chignolin CUDA smoke passed with `BOLTZ_ACCELERATOR=gpu`.
 - Chai-1 Chignolin CUDA smoke passed with `CHAI1_DEVICE=cuda:0`.
 - ESMFold Chignolin CUDA smoke passed with `ESMFOLD_CPU_ONLY=0`.
-- OpenFold CUDA smoke passed with `OPENFOLD_MODE=single_sequence OPENFOLD_DEVICE=cuda:0`.
+- OpenFold CUDA smoke passed with `OPENFOLD_MODE=single_sequence OPENFOLD_DEVICE=cuda:0`; the 2026-05-19 7ROA run produced `rank_001.pdb` in `results/backend_smoke/openfold_single_sequence/`.
 - OmegaFold's environment sees CUDA through PyTorch and its Chignolin smoke prediction completed successfully.
-- ColabFold CUDA smoke now passes after installing `jax[cuda12]==0.5.3`; its JAX stack reports `CudaDevice(id=0)` and the Chignolin run logs `Running on GPU`.
+- ColabFold CUDA smoke now passes after installing `jax[cuda12]==0.5.3`; its JAX stack reports CUDA devices, and the 2026-05-19 7ROA run produced `rank_001.pdb` in `results/backend_smoke/colabfold_single_sequence/`.
 
-The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
+A one-target six-backend real smoke for `esmfold`, `omegafold`, `boltz2`, `chai1`, `colabfold`, and `openfold` passed on 7ROA on 2026-05-19 under `results/backend_smoke/six_backend_single_sequence/`. The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
