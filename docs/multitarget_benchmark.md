@@ -54,3 +54,8 @@ OpenFold's canonical two-target score rows are retained from prior single-sequen
 Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker.
 
 For every future Codex instruction, write a dated execution log under `codex-plan/` using the `YYYYMMDD_` filename prefix.
+
+
+## ColabFold Single-vs-MSA Smoke (2026-05-20)
+
+A first-five carbon-tracked comparison is available under `results/colabfold_single_vs_msa_first5_carbon/`. It uses explicit model IDs `colabfold_single` and `colabfold_msa`. The MSA variant cleans its run-local MSA directory and runs `colabfold_search` inside `runners/run_colabfold.sh`, so MMseqs2 search time and CodeCarbon emissions are included in the model run.

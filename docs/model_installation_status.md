@@ -47,3 +47,8 @@ export OPENFOLD_DATA_DIR=/path/to/openfold_databases
 The current smoke path has produced `rank_001.pdb` for both active targets and for the 7ROA 2026-05-19 smoke, and scoring succeeds. Fresh runner invocations default to MSA mode; provide real template/databases before drawing scientific conclusions. Use `OPENFOLD_MODE=single_sequence` only for explicit smoke tests.
 
 AlphaFold3 remains disabled as a future restricted/non-commercial-use backend and should not be enabled until parameter and output usage terms are compatible with the intended use.
+
+
+## ColabFold MSA Mode Update (2026-05-20)
+
+`colabfold_single` and `colabfold_msa` were validated as explicit temporary benchmark variants. `colabfold_msa` uses the local ColabFold/MMseqs2 database at `/data/chen/protein_folding_databases/colabfold` and reruns MSA search inside each timed/carbon-tracked inference. The first-five comparison passed with 10/10 successful runs under `results/colabfold_single_vs_msa_first5_carbon/`. OpenFold MSA mode was attempted as `openfold_msa` and blocked by missing OpenFold/AlphaFold-compatible databases under `work/openfold_inputs`, not by ColabFold database availability.

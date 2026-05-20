@@ -1,0 +1,11 @@
+models:
+  colabfold_single:
+    enabled: true
+    runner: env COLABFOLD_MSA_MODE=single_sequence COLABFOLD_MODEL_NAME=colabfold_single bash runners/run_colabfold.sh
+    env_name: colabfold
+    notes: ColabFold no-MSA/single-sequence mode.
+  colabfold_msa:
+    enabled: true
+    runner: env COLABFOLD_MSA_MODE=mmseqs2_uniref_env COLABFOLD_MODEL_NAME=colabfold_msa COLABFOLD_DB=/data/chen/protein_folding_databases/colabfold COLABFOLD_MMSEQS=/data/chen/software/mmseqs/bin/mmseqs COLABFOLD_SEARCH_GPU=1 bash runners/run_colabfold.sh
+    env_name: colabfold
+    notes: ColabFold local MMseqs2 MSA mode; MSA search occurs inside the timed/carbon-tracked runner.

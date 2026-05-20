@@ -380,3 +380,14 @@ GPU defaults and smoke notes:
 - ColabFold CUDA smoke now passes after installing `jax[cuda12]==0.5.3`; its JAX stack reports CUDA devices, and the 2026-05-19 7ROA run produced `rank_001.pdb` in `results/backend_smoke/colabfold_single_sequence/`.
 
 A one-target six-backend real smoke for `esmfold`, `omegafold`, `boltz2`, `chai1`, `colabfold`, and `openfold` passed on 7ROA on 2026-05-19 under `results/backend_smoke/six_backend_single_sequence/`. The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
+
+## ColabFold MSA Timing/Carbon Variant
+
+The ColabFold runner supports explicit temporary model IDs for comparing no-MSA and local-MSA modes:
+
+| Model ID | Meaning |
+|---|---|
+| `colabfold_single` | ColabFold with `--msa-mode single_sequence` |
+| `colabfold_msa` | ColabFold with local MMseqs2 MSA search using `/data/chen/protein_folding_databases/colabfold` |
+
+Use `scripts/smoke_test_colabfold_single_vs_msa_first5_with_carbon.sh` to rerun the first-five comparison. The MSA runner removes the run-local MSA search directory before each inference and runs `colabfold_search` inside the timed CodeCarbon-tracked subprocess, so timing and carbon include both MSA generation and structure prediction. Results are written to `results/colabfold_single_vs_msa_first5_carbon/`.

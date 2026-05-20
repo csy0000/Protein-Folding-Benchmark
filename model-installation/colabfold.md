@@ -41,3 +41,20 @@ conda run -n colabfold python -m pip install "jax[cuda12]==0.5.3"
 
 After this update, `jax.devices()` reports CUDA devices and the 7ROA smoke
 logs `Running on GPU`.
+
+## Validated MSA Mode (2026-05-20)
+
+The runner now supports explicit ColabFold variants via environment variables:
+
+- `COLABFOLD_MSA_MODE=single_sequence` for no-MSA/single-sequence mode.
+- `COLABFOLD_MSA_MODE=mmseqs2_uniref_env` for local ColabFold/MMseqs2 MSA mode.
+
+For MSA-mode timing and carbon accounting, `runners/run_colabfold.sh` removes the run-local `tmp_colabfold_msa_search` directory, runs `colabfold_search` against `/data/chen/protein_folding_databases/colabfold`, then runs `colabfold_batch` on the generated A3M within the same benchmarked subprocess. This means `run_metadata.csv` timing and CodeCarbon fields include both MSA search and structure prediction.
+
+The reusable smoke command is:
+
+```bash
+bash scripts/smoke_test_colabfold_single_vs_msa_first5_with_carbon.sh
+```
+
+It writes to `results/colabfold_single_vs_msa_first5_carbon/` and uses the model IDs `colabfold_single` and `colabfold_msa`.

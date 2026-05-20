@@ -1,0 +1,11 @@
+models:
+  openfold_single:
+    enabled: true
+    runner: env OPENFOLD_MODE=single_sequence OPENFOLD_DEVICE=cuda:0 bash runners/run_openfold.sh
+    env_name: openfold
+    notes: OpenFold explicit single-sequence smoke mode.
+  openfold_msa:
+    enabled: true
+    runner: env OPENFOLD_MODE=msa OPENFOLD_DEVICE=cuda:0 bash runners/run_openfold.sh
+    env_name: openfold
+    notes: OpenFold native MSA mode; expected to require OpenFold/AlphaFold-compatible databases, not ColabFold MMseqs databases.
