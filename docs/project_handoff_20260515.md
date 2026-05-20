@@ -420,3 +420,8 @@ Once external storage is available:
   native GPU pressure.
 - Use `--gpu-cleanup-sleep-sec 10` for long mixed-backend GPU runs.
 - Do not download large MSA/template databases into the repository.
+
+
+## 2026-05-20 OpenFold MSA Handoff Update
+
+OpenFold now has a validated ColabFold-MSA smoke path through `runners/run_openfold_msa.sh`. The runner regenerates ColabFold/MMseqs2 MSAs inside the benchmarked subprocess and feeds the generated A3M into OpenFold as a run-local precomputed alignment. The first-five carbon-tracked comparison is under `results/openfold_single_vs_msa_first5_carbon/`.

@@ -391,3 +391,14 @@ The ColabFold runner supports explicit temporary model IDs for comparing no-MSA 
 | `colabfold_msa` | ColabFold with local MMseqs2 MSA search using `/data/chen/protein_folding_databases/colabfold` |
 
 Use `scripts/smoke_test_colabfold_single_vs_msa_first5_with_carbon.sh` to rerun the first-five comparison. The MSA runner removes the run-local MSA search directory before each inference and runs `colabfold_search` inside the timed CodeCarbon-tracked subprocess, so timing and carbon include both MSA generation and structure prediction. Results are written to `results/colabfold_single_vs_msa_first5_carbon/`.
+
+## OpenFold With ColabFold-Generated MSA
+
+The OpenFold runner set includes explicit temporary model IDs for comparing dummy/single-sequence input against a freshly generated ColabFold/MMseqs2 MSA:
+
+| Model ID | Meaning |
+|---|---|
+| `openfold_single` | OpenFold single-sequence/dummy-MSA smoke path |
+| `openfold_msa` | OpenFold using a run-local ColabFold/MMseqs2 A3M from `/data/chen/protein_folding_databases/colabfold` |
+
+Use `scripts/smoke_test_openfold_single_vs_msa_first5_with_carbon.sh` to rerun the first-five comparison. The MSA runner removes its run-local alignment directory, runs `colabfold_search`, copies the generated A3M into OpenFold's precomputed alignment layout, and runs OpenFold inference in the same timed CodeCarbon-tracked subprocess. Results are written to `results/openfold_single_vs_msa_first5_carbon/`.

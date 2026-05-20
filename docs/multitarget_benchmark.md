@@ -59,3 +59,8 @@ For every future Codex instruction, write a dated execution log under `codex-pla
 ## ColabFold Single-vs-MSA Smoke (2026-05-20)
 
 A first-five carbon-tracked comparison is available under `results/colabfold_single_vs_msa_first5_carbon/`. It uses explicit model IDs `colabfold_single` and `colabfold_msa`. The MSA variant cleans its run-local MSA directory and runs `colabfold_search` inside `runners/run_colabfold.sh`, so MMseqs2 search time and CodeCarbon emissions are included in the model run.
+
+
+## OpenFold Single-vs-ColabFold-MSA Smoke (2026-05-20)
+
+A first-five carbon-tracked OpenFold comparison is available under `results/openfold_single_vs_msa_first5_carbon/`. It uses `openfold_single` and `openfold_msa` as model IDs. `openfold_msa` runs local ColabFold/MMseqs2 MSA search inside `runners/run_openfold_msa.sh`, arranges the generated `.a3m` as an OpenFold precomputed alignment, then runs OpenFold inference. Timing and carbon include both MSA search and inference.

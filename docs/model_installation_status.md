@@ -52,3 +52,8 @@ AlphaFold3 remains disabled as a future restricted/non-commercial-use backend an
 ## ColabFold MSA Mode Update (2026-05-20)
 
 `colabfold_single` and `colabfold_msa` were validated as explicit temporary benchmark variants. `colabfold_msa` uses the local ColabFold/MMseqs2 database at `/data/chen/protein_folding_databases/colabfold` and reruns MSA search inside each timed/carbon-tracked inference. The first-five comparison passed with 10/10 successful runs under `results/colabfold_single_vs_msa_first5_carbon/`. OpenFold MSA mode was attempted as `openfold_msa` and blocked by missing OpenFold/AlphaFold-compatible databases under `work/openfold_inputs`, not by ColabFold database availability.
+
+
+## OpenFold ColabFold-MSA Mode Update (2026-05-20)
+
+`openfold_single` and `openfold_msa` were validated as explicit temporary benchmark variants. `openfold_msa` uses `runners/run_openfold_msa.sh` to generate a fresh ColabFold/MMseqs2 A3M from `/data/chen/protein_folding_databases/colabfold` during every model run, then passes it to OpenFold through `--use-precomputed-alignments`. The first-five comparison passed with 10/10 successful runs under `results/openfold_single_vs_msa_first5_carbon/`.

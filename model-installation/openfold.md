@@ -246,3 +246,16 @@ Observed summary metrics from the current score CSVs:
 | `1UBQ_ubiquitin` | 0.95445 | 0.96435 |
 
 Do not overinterpret quality from these two smoke targets.
+
+
+## Validated ColabFold/MMseqs MSA Mode (2026-05-20)
+
+`runners/run_openfold_msa.sh` implements the benchmark `openfold_msa` variant. It keeps the standard runner interface, removes the run-local `tmp_openfold_colabfold_msa` directory, runs:
+
+```bash
+conda run -n colabfold colabfold_search --mmseqs /data/chen/software/mmseqs/bin/mmseqs --gpu 1 --threads 64 input.fasta /data/chen/protein_folding_databases/colabfold <output>/tmp_openfold_colabfold_msa/colabfold_search
+```
+
+Then it copies the generated A3M to `<output>/tmp_openfold_colabfold_msa/precomputed_alignments/<target_id>/colabfold.a3m` and runs `scripts/run_openfold.py` with `--use-precomputed-alignments` pointing at that freshly created alignment root. Because both steps happen inside one runner subprocess, `run_benchmark_from_targets.py` timing and CodeCarbon include MSA search plus OpenFold inference.
+
+The first-five smoke comparison passed on 2026-05-20 under `results/openfold_single_vs_msa_first5_carbon/`.

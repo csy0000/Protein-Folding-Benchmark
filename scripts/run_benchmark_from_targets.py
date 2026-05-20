@@ -19,14 +19,16 @@ import yaml
 from carbon_tracking import CARBON_METADATA_COLUMNS, CarbonRunTracker, empty_carbon_metadata
 
 
-SINGLE_OUTPUT_MODELS = {"esmfold", "omegafold", "openfold"}
-MODEL_ORDER_PRIORITY = ["colabfold", "openfold"]
+SINGLE_OUTPUT_MODELS = {"esmfold", "omegafold", "openfold", "openfold_single", "openfold_msa"}
+MODEL_ORDER_PRIORITY = ["colabfold", "colabfold_single", "colabfold_msa", "openfold", "openfold_single", "openfold_msa"]
 
 GPU_DEFAULT_ENV = {
     "boltz2": {"BOLTZ_ACCELERATOR": "gpu"},
     "chai1": {"CHAI1_DEVICE": "cuda:0"},
     "esmfold": {"ESMFOLD_CPU_ONLY": "0"},
     "openfold": {"OPENFOLD_DEVICE": "cuda:0"},
+    "openfold_single": {"OPENFOLD_DEVICE": "cuda:0"},
+    "openfold_msa": {"OPENFOLD_DEVICE": "cuda:0"},
 }
 
 CONSERVATIVE_GPU_ENV = {
