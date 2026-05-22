@@ -2,13 +2,14 @@
 
 | Model | Backend ID | Environment | Repo path | Installed? | Runner exists? | Tested on 1UAO? | Top-k generated | Scoring succeeded? | Notes |
 |---|---|---|---|---|---|---|---:|---|---|
-| OpenFold | `openfold` | `openfold` | `models/openfold` | yes | yes | yes | 1 | yes | Python 3.7/PyTorch 1.12 OpenFold env installed from `models/openfold/environment.yml`; pinned `mkl<2024` and installed `gemmi`. Single-sequence 7ROA smoke and six-backend combined smoke passed on 2026-05-19. Full MSA mode still requires configured databases. |
-| OpenFold3 | `openfold3` | `openfold3` | `models/openfold-3` | repo cloned | yes | no | 0 | no | Placeholder environment and runner added; package installation and validation pending. |
+| OpenFold | `openfold` | `openfold` | `models/openfold` | yes | yes | yes | 1 | yes | Python 3.7/PyTorch 1.12 OpenFold env installed from `models/openfold/environment.yml`; pinned `mkl<2024` and installed `gemmi`. Canonical default uses fresh ColabFold/MMseqs2 MSA input; `openfold_single`/`openfold_msa` remain explicit ablation IDs. |
+| OpenFold3 | `openfold3` | `openfold3` | `models/openfold-3` | experimental | yes | 7ROA only | 1 | yes | Installed from PyPI `openfold3==0.4.1` with env-local CUDA toolkit 12.8 and checkpoint `weights/openfold3/of3-p2-155k.pt`; passed a one-target 7ROA low-memory smoke, but remains disabled in canonical config pending broader validation. |
+| Protenix | `protenix` | `protenix` | `models/protenix` | experimental | yes | 7ROA and first-five CASP smoke | 1 | yes | PyPI `protenix==2.0.0` installed in a separate env with env-local CUDA toolkit 12.6 and cache/checkpoint under `weights/protenix`; shared ColabFold/MMseqs2 MSA smoke passed for 5/5 first-five targets. Disabled in canonical config. |
 | Boltz-2 | `boltz2` | `boltz` | `models/boltz` | yes | yes | yes | 5 | yes | Current canonical Boltz backend. Runner defaults to CPU via `BOLTZ_ACCELERATOR=cpu`; Chignolin CUDA smoke passed with `BOLTZ_ACCELERATOR=gpu`. Uses disabled optional kernels, local model cache, and explicit single-sequence MSA mode. Legacy `runners/run_boltz.sh` is only a compatibility wrapper. |
 | Chai-1 | `chai1` | `chai1` | `models/chai-lab` | yes | yes | yes | 5 | yes | Runner defaults to CPU via `CHAI1_DEVICE=cpu`; Chignolin CUDA smoke passed with `CHAI1_DEVICE=cuda:0`. Uses local asset cache and Chai-compatible FASTA headers. |
 | ESMFold | `esmfold` | `esmfold` | `models/esm` | yes | yes | yes | 1 | yes | Runner defaults to CPU-only mode; Chignolin CUDA smoke passed with `ESMFOLD_CPU_ONLY=0`. Uses local ESM source, project-local Torch cache, and a checkpoint-key compatibility shim. |
-| ColabFold | `colabfold` | `colabfold` | n/a | yes | yes | yes | 5 | yes | Installed from PyPI package `colabfold[alphafold]`; runner uses `colabfold_batch --msa-mode single_sequence`, AF2-PTM parameters under `weights/colabfold`, CUDA JAX, and no local sequence database requirement for current smoke workflow. 7ROA GPU smoke passed on 2026-05-19. |
-| AlphaFold2 | `alphafold2` | `alphafold2` | `models/alphafold` | yes | yes | no | 0 | no | Canonical AF2 baseline; official parameters/databases are not required unless explicitly requested. |
+| ColabFold | `colabfold` | `colabfold` | n/a | yes | yes | yes | 5 | yes | Installed from PyPI package `colabfold[alphafold]`; canonical default uses local ColabFold/MMseqs2 MSA mode with AF2-PTM parameters under `weights/colabfold`. `colabfold_single`/`colabfold_msa` remain explicit ablation IDs. |
+| AlphaFold2 | `alphafold2` | `alphafold2` | `models/alphafold` | yes | yes | no | 0 | no | Official source checkout exists, but no `af2`/`alphafold2` env, official parameters, or AlphaFold database layout are configured. Reusing ColabFold would duplicate the enabled `colabfold` backend. |
 | AlphaFold3 | `alphafold3` | `alphafold3` | `models/alphafold3` | repo cloned | yes | no | 0 | no | Restricted-access baseline; weights require separate approval/terms. Placeholder environment and runner added. |
 | OmegaFold | `omegafold` | `omegafold` | `models/OmegaFold` | yes | yes | yes | 1 | yes | Single-sequence baseline; produced `rank_001.pdb` and scoring succeeded. |
 
@@ -19,7 +20,7 @@ Ubiquitin / `1UBQ_ubiquitin` has also been run for the currently enabled validat
 - `data/scores/1UBQ_ubiquitin_scores.csv`
 - `data/scores/1UBQ_ubiquitin_model_summary.csv`
 
-The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`. A one-target six-backend real smoke passed on 7ROA on 2026-05-19 under `results/backend_smoke/six_backend_single_sequence/`. `scripts/run_benchmark_from_targets.py` defaults these runs to GPU where supported by injecting `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0` unless the caller already set those variables. The driver runs `colabfold` and `openfold` before other enabled models and waits 5 seconds after each target/model run by default to let GPU memory settle. The current canonical score CSVs contain 18 rows per target, include lDDT-C-alpha columns from `scripts/02_score_predictions.py`, and rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. The cross-target summary is `data/scores/all_targets_model_summary.csv`.
+The current enabled model set is `esmfold`, `omegafold`, `chai1`, `boltz2`, `colabfold`, and `openfold`. Main/default-mode runs keep these canonical names and write MSA provenance columns to `run_metadata.csv`; suffixed `*_single` and `*_msa` names are side-study ablations. `scripts/run_benchmark_from_targets.py` defaults carbon tracking to world-average accounting and can be overridden with `--carbon-country-iso-code CHE`. It defaults backend runs to GPU where supported by injecting `BOLTZ_ACCELERATOR=gpu`, `CHAI1_DEVICE=cuda:0`, `ESMFOLD_CPU_ONLY=0`, and `OPENFOLD_DEVICE=cuda:0` unless the caller already set those variables. The driver runs `colabfold` and `openfold` before other enabled models and waits 5 seconds after each target/model run by default to let GPU memory settle. The current canonical score CSVs contain 18 rows per target, include lDDT-C-alpha columns from `scripts/02_score_predictions.py`, and rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. The cross-target summary is `data/scores/all_targets_model_summary.csv`.
 
 ## Optional OpenFold Setup
 
@@ -44,7 +45,7 @@ export OPENFOLD_PARAMS_DIR=/path/to/openfold_params
 export OPENFOLD_DATA_DIR=/path/to/openfold_databases
 ```
 
-The current smoke path has produced `rank_001.pdb` for both active targets and for the 7ROA 2026-05-19 smoke, and scoring succeeds. Fresh runner invocations default to MSA mode; provide real template/databases before drawing scientific conclusions. Use `OPENFOLD_MODE=single_sequence` only for explicit smoke tests.
+The current smoke path has produced `rank_001.pdb` for both active targets and for the 7ROA 2026-05-19 smoke, and scoring succeeds. Canonical OpenFold now uses the `runners/run_openfold_msa.sh` path with fresh ColabFold/MMseqs2 A3M input. Use `openfold_single` only for explicit smoke/ablation tests.
 
 AlphaFold3 remains disabled as a future restricted/non-commercial-use backend and should not be enabled until parameter and output usage terms are compatible with the intended use.
 
@@ -57,3 +58,32 @@ AlphaFold3 remains disabled as a future restricted/non-commercial-use backend an
 ## OpenFold ColabFold-MSA Mode Update (2026-05-20)
 
 `openfold_single` and `openfold_msa` were validated as explicit temporary benchmark variants. `openfold_msa` uses `runners/run_openfold_msa.sh` to generate a fresh ColabFold/MMseqs2 A3M from `/data/chen/protein_folding_databases/colabfold` during every model run, then passes it to OpenFold through `--use-precomputed-alignments`. The first-five comparison passed with 10/10 successful runs under `results/openfold_single_vs_msa_first5_carbon/`.
+
+## 2026-05-21 AF2/OpenFold3 Smoke Update
+
+AF2 was inspected using the official AlphaFold2 source cloned at `models/alphafold`, but no `af2` benchmark backend was added. The exact blocker is documented in `model-installation/af2.md` and `results/backend_smoke/af2_default/BLOCKED.md`: no separate AF2 environment or official AlphaFold database layout is configured, and reusing ColabFold would duplicate the existing `colabfold` backend.
+
+OpenFold3 is installed experimentally in the separate `openfold3` environment with PyPI `openfold3==0.4.1`, env-local CUDA toolkit 12.8, and checkpoint `weights/openfold3/of3-p2-155k.pt`. A 7ROA one-target low-memory smoke succeeded under `results/backend_smoke/openfold3_default/` with `rank_001.pdb`, runtime `82.752562` seconds, `2.3836289056808897` g CO2e, lDDT-C-alpha `0.4756351915054986`, and TM-score normalized by reference length `0.39914`. It remains disabled in the canonical config pending broader validation; details are in `model-installation/openfold3.md`.
+
+
+## Shared ColabFold MSA Cache Update (2026-05-22)
+
+A shared ColabFold/MMseqs2 MSA cache workflow was added for experimental backends that can consume precomputed A3M files. MSA search is run once per target with `scripts/generate_colabfold_msas_from_targets.py`; inference runners receive `SHARED_MSA_*` paths from `scripts/run_benchmark_from_targets.py`, and the benchmark records `msa_generation_included_in_timing=false`, `msa_generation_included_in_carbon=false`, and `msa_reused=true` for model inference rows.
+
+Generated cache outputs:
+
+- One-target 7ROA cache: `results/shared_msa_colabfold_7ROA/msa_metadata.csv`
+- First-five cache: `results/shared_msa_colabfold_first5/msa_metadata.csv`
+
+Experimental shared-MSA results:
+
+- `openfold3`: 5/5 first-five targets succeeded using `runners/run_openfold3_shared_msa.sh`; mean lDDT-C-alpha `0.8514732150023233`, mean TM-score-ref `0.834862`.
+- `protenix`: 5/5 first-five targets succeeded using `runners/run_protenix_shared_msa.sh`; mean lDDT-C-alpha `0.8665522357206289`, mean TM-score-ref `0.855224`.
+
+Summary files:
+
+- `results/protenix_openfold3_shared_msa_first5/run_metadata.csv`
+- `results/protenix_openfold3_shared_msa_first5/scores/all_targets_model_summary.csv`
+- `results/protenix_openfold3_shared_msa_first5/shared_msa_score_cost_summary.csv`
+
+These backends remain experimental and are not enabled in `configs/models.yaml`.

@@ -6,7 +6,12 @@ OUTPUT_DIR="$2"
 TOP_K="${3:-1}"
 
 if [[ "$TOP_K" != "1" ]]; then
-  echo "OpenFold3 experimental runner only supports top_k=1 for smoke tests." >&2
+  echo "OpenFold3 experimental shared-MSA runner only supports top_k=1 for smoke tests." >&2
+  exit 2
+fi
+
+if [[ -z "${SHARED_MSA_DIR:-}" || -z "${SHARED_MSA_A3M_FILE:-}" ]]; then
+  echo "SHARED_MSA_DIR and SHARED_MSA_A3M_FILE must be set by the benchmark driver." >&2
   exit 2
 fi
 
@@ -28,17 +33,24 @@ export CUDA_HOME="${CUDA_HOME:-${CONDA_PREFIX}}"
 export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
 export OPENFOLD_CACHE="${OPENFOLD_CACHE:-${PWD}/weights/openfold3}"
 
-QUERY_JSON="${OUTPUT_DIR}/query_openfold3.json"
-RUNNER_YAML="${OUTPUT_DIR}/runner_openfold3_low_mem.yml"
+QUERY_JSON="${OUTPUT_DIR}/query_openfold3_shared_msa.json"
+RUNNER_YAML="${OUTPUT_DIR}/runner_openfold3_shared_msa_low_mem.yml"
 RAW_OUTPUT="${OUTPUT_DIR}/raw_openfold3"
+OF3_MSA_DIR="${OUTPUT_DIR}/openfold3_msa/A"
+mkdir -p "$OF3_MSA_DIR"
 
-python - "$INPUT_FASTA" "$QUERY_JSON" <<'PYJSON'
+# OpenFold3's MSA settings key off filename stems. Use the documented cfdb_hits
+# stem while preserving the canonical shared MSA file in metadata.
+cp "$SHARED_MSA_A3M_FILE" "${OF3_MSA_DIR}/cfdb_hits.a3m"
+
+python - "$INPUT_FASTA" "$QUERY_JSON" "${OF3_MSA_DIR}/cfdb_hits.a3m" <<'PYJSON'
 import json
 import sys
 from pathlib import Path
 
 fasta = Path(sys.argv[1])
 out = Path(sys.argv[2])
+msa_path = str(Path(sys.argv[3]).resolve())
 header = ""
 seq_parts = []
 for line in fasta.read_text().splitlines():
@@ -56,13 +68,17 @@ if not sequence:
 query = {
     "queries": {
         target_id: {
+            "use_msas": True,
+            "use_main_msas": True,
+            "use_paired_msas": False,
             "chains": [
                 {
                     "molecule_type": "protein",
                     "chain_ids": ["A"],
                     "sequence": sequence,
+                    "main_msa_file_paths": [msa_path],
                 }
-            ]
+            ],
         }
     }
 }
@@ -82,6 +98,13 @@ model_update:
           use_deepspeed_evo_attention: false
           use_cueq_triangle_kernels: false
           use_triton_triangle_kernels: false
+dataset_config_kwargs:
+  msa:
+    max_seq_counts:
+      cfdb_hits: 100000000
+    msas_to_pair: []
+    aln_order:
+      - cfdb_hits
 output_writer_settings:
   structure_format: pdb
   write_full_confidence_scores: false
@@ -109,7 +132,7 @@ fi
 
 cp "$PREDICTED" "${OUTPUT_DIR}/rank_001.pdb"
 
-python - "$OUTPUT_DIR" "$INPUT_FASTA" "$PREDICTED" "$CHECKPOINT" <<'PYMETA'
+python - "$OUTPUT_DIR" "$INPUT_FASTA" "$PREDICTED" "$CHECKPOINT" "$SHARED_MSA_A3M_FILE" "$SHARED_MSA_DIR" "${OF3_MSA_DIR}/cfdb_hits.a3m" <<'PYMETA'
 import json
 import sys
 from pathlib import Path
@@ -123,12 +146,18 @@ metadata = {
     "checkpoint": sys.argv[4],
     "top_k_requested": 1,
     "top_k_generated": 1,
-    "top_k_policy": "experimental OpenFold3 smoke; one seed and one diffusion sample",
-    "msa_used": False,
-    "msa_source": "none",
-    "msa_mode": "msa_free_low_memory",
+    "top_k_policy": "experimental OpenFold3 shared-MSA smoke; one seed and one diffusion sample",
+    "msa_used": True,
+    "msa_source": "colabfold_mmseqs2",
+    "msa_mode": "shared_precomputed_msa",
+    "msa_storage": "Shared cache A3M copied into runner-local OpenFold3 MSA directory",
+    "shared_msa_a3m_file": sys.argv[5],
+    "shared_msa_dir": sys.argv[6],
+    "local_msa_dir": str(output_dir / "openfold3_msa" / "A"),
+    "local_msa_a3m_file": sys.argv[7],
+    "openfold3_main_msa_file_paths": [sys.argv[7]],
     "use_templates": False,
-    "runner_yaml": str(output_dir / "runner_openfold3_low_mem.yml"),
+    "runner_yaml": str(output_dir / "runner_openfold3_shared_msa_low_mem.yml"),
 }
 (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 PYMETA

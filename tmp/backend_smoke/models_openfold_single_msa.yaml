@@ -6,6 +6,6 @@ models:
     notes: OpenFold explicit single-sequence smoke mode.
   openfold_msa:
     enabled: true
-    runner: env OPENFOLD_MODE=msa OPENFOLD_DEVICE=cuda:0 bash runners/run_openfold.sh
+    runner: env OPENFOLD_DEVICE=cuda:0 COLABFOLD_DB=/data/chen/protein_folding_databases/colabfold COLABFOLD_MMSEQS=/data/chen/software/mmseqs/bin/mmseqs COLABFOLD_SEARCH_GPU=1 bash runners/run_openfold_msa.sh
     env_name: openfold
-    notes: OpenFold native MSA mode; expected to require OpenFold/AlphaFold-compatible databases, not ColabFold MMseqs databases.
+    notes: OpenFold inference with freshly generated ColabFold/MMseqs A3M alignments inside the timed/carbon-tracked runner.

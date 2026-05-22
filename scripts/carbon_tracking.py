@@ -3,16 +3,25 @@
 from __future__ import annotations
 
 import csv
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+WORLD_AVERAGE_CARBON_INTENSITY_G_PER_KWH = 475.0
+WORLD_AVERAGE_INTENSITY_SOURCE = "configurable_default_world_average"
+WORLD_AVERAGE_FALLBACK_COUNTRY = "CHE"
 
 
 CARBON_METADATA_COLUMNS = [
     "carbon_tracking_enabled",
     "carbon_method",
     "carbon_country_iso_code",
+    "carbon_region",
+    "carbon_intensity_mode",
+    "carbon_intensity_g_per_kwh",
+    "carbon_intensity_source",
     "carbon_emissions_kg",
     "carbon_emissions_g",
     "carbon_energy_consumed_kwh",
@@ -28,11 +37,23 @@ CARBON_METADATA_COLUMNS = [
 ]
 
 
+def is_world_average(country_iso_code: str) -> bool:
+    return country_iso_code.strip().upper() in {"WORLD", "WORLD_AVERAGE", "GLOBAL"}
+
+
 def empty_carbon_metadata(enabled: bool = False, country_iso_code: str = "", error: str = "") -> dict[str, Any]:
+    world_average = is_world_average(country_iso_code)
+    carbon_source = ""
+    if enabled:
+        carbon_source = WORLD_AVERAGE_INTENSITY_SOURCE if world_average else "codecarbon_country_intensity"
     return {
         "carbon_tracking_enabled": str(bool(enabled)).lower(),
-        "carbon_method": "codecarbon_offline" if enabled else "",
-        "carbon_country_iso_code": country_iso_code,
+        "carbon_method": "codecarbon_offline_world_average" if enabled and world_average else ("codecarbon_offline" if enabled else ""),
+        "carbon_country_iso_code": "WORLD" if world_average else country_iso_code,
+        "carbon_region": "world" if world_average else country_iso_code,
+        "carbon_intensity_mode": "world_average" if world_average else ("country" if enabled else ""),
+        "carbon_intensity_g_per_kwh": WORLD_AVERAGE_CARBON_INTENSITY_G_PER_KWH if world_average else "",
+        "carbon_intensity_source": carbon_source,
         "carbon_emissions_kg": "",
         "carbon_emissions_g": "",
         "carbon_energy_consumed_kwh": "",
@@ -76,6 +97,12 @@ class CarbonRunTracker:
         self.output_path = self.output_dir / self.output_file
         self._tracker = None
         self._start_error = ""
+        self._world_average = is_world_average(self.country_iso_code)
+        self._tracker_country_iso_code = (
+            os.environ.get("CODECARBON_WORLD_AVERAGE_FALLBACK_COUNTRY", WORLD_AVERAGE_FALLBACK_COUNTRY)
+            if self._world_average
+            else self.country_iso_code
+        )
 
     def start(self) -> None:
         if not self.enabled:
@@ -85,7 +112,7 @@ class CarbonRunTracker:
             from codecarbon import OfflineEmissionsTracker
 
             self._tracker = OfflineEmissionsTracker(
-                country_iso_code=self.country_iso_code,
+                country_iso_code=self._tracker_country_iso_code,
                 output_dir=str(self.output_dir),
                 output_file=self.output_file,
                 project_name=f"{self.project_name}_{self.run_label}",
@@ -114,6 +141,21 @@ class CarbonRunTracker:
 
         if self.output_path.exists():
             metadata.update(read_codecarbon_csv(self.output_path))
+        if self._world_average:
+            metadata["carbon_method"] = "codecarbon_offline_world_average"
+            metadata["carbon_country_iso_code"] = "WORLD"
+            metadata["carbon_region"] = "world"
+            metadata["carbon_intensity_mode"] = "world_average"
+            metadata["carbon_intensity_g_per_kwh"] = WORLD_AVERAGE_CARBON_INTENSITY_G_PER_KWH
+            metadata["carbon_intensity_source"] = WORLD_AVERAGE_INTENSITY_SOURCE
+            energy = metadata.get("carbon_energy_consumed_kwh", "")
+            try:
+                emissions_kg = float(energy) * WORLD_AVERAGE_CARBON_INTENSITY_G_PER_KWH / 1000.0
+            except (TypeError, ValueError):
+                emissions_kg = None
+            if emissions_kg is not None:
+                metadata["carbon_emissions_kg"] = emissions_kg
+                metadata["carbon_emissions_g"] = emissions_kg * 1000.0
         return metadata
 
 

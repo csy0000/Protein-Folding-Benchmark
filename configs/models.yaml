@@ -1,14 +1,22 @@
 models:
   openfold:
     enabled: true
-    runner: bash runners/run_openfold.sh
+    runner: env OPENFOLD_DEVICE=cuda:0 COLABFOLD_DB=/data/chen/protein_folding_databases/colabfold COLABFOLD_MMSEQS=/data/chen/software/mmseqs/bin/mmseqs COLABFOLD_SEARCH_GPU=1 bash runners/run_openfold_msa.sh
     env_name: openfold
     repo_dir: ${OPENFOLD_REPO:-models/openfold}
-    mode: ${OPENFOLD_MODE:-msa}
+    mode: default_msa
     params_dir: ${OPENFOLD_PARAMS_DIR:-weights/colabfold/params}
     data_dir: ${OPENFOLD_DATA_DIR:-work/openfold_inputs}
     output_subdir: openfold
-    notes: "OpenFold is enabled from existing scored smoke outputs. The runner now defaults to MSA mode and requires real OpenFold/AlphaFold-compatible databases for fresh predictions; set OPENFOLD_MODE=single_sequence only for explicit smoke tests."
+    msa_used: true
+    msa_source: colabfold_mmseqs2
+    msa_mode: default_msa
+    msa_database: colabfold
+    msa_database_path: /data/chen/protein_folding_databases/colabfold
+    msa_generation_included_in_timing: true
+    msa_generation_included_in_carbon: true
+    msa_reused: false
+    notes: "Canonical OpenFold uses freshly generated ColabFold/MMseqs2 MSAs. Use openfold_single/openfold_msa side configs for explicit ablations."
 
   openfold3:
     enabled: false
@@ -17,10 +25,21 @@ models:
   boltz2:
     enabled: true
     runner: bash runners/run_boltz2.sh
+    msa_used: false
+    msa_source: none
+    msa_mode: model_default_no_msa
+    msa_database: none
+    msa_generation_included_in_timing: false
+    msa_generation_included_in_carbon: false
+    msa_reused: false
 
   chai1:
     enabled: true
     runner: bash runners/run_chai1.sh
+    msa_used: unknown
+    msa_source: unknown
+    msa_mode: model_default_unknown
+    msa_notes: "MSA usage not confirmed from Chai-1 runner/logs; runner passes FASTA only"
 
   esmfold:
     enabled: true
@@ -28,7 +47,15 @@ models:
 
   colabfold:
     enabled: true
-    runner: bash runners/run_colabfold.sh
+    runner: env COLABFOLD_MSA_MODE=mmseqs2_uniref_env COLABFOLD_MODEL_NAME=colabfold COLABFOLD_DB=/data/chen/protein_folding_databases/colabfold COLABFOLD_MMSEQS=/data/chen/software/mmseqs/bin/mmseqs COLABFOLD_SEARCH_GPU=1 bash runners/run_colabfold.sh
+    msa_used: true
+    msa_source: colabfold_mmseqs2
+    msa_mode: default_msa
+    msa_database: colabfold
+    msa_database_path: /data/chen/protein_folding_databases/colabfold
+    msa_generation_included_in_timing: true
+    msa_generation_included_in_carbon: true
+    msa_reused: false
 
   alphafold2:
     enabled: false

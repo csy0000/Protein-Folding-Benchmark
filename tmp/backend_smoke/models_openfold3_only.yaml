@@ -1,0 +1,12 @@
+models:
+  openfold3:
+    enabled: true
+    runner: env CUDA_VISIBLE_DEVICES=0 bash runners/run_openfold3.sh
+    msa_used: false
+    msa_source: none
+    msa_mode: msa_free_low_memory
+    msa_database: none
+    msa_database_path: none
+    msa_generation_included_in_timing: false
+    msa_generation_included_in_carbon: false
+    msa_reused: false

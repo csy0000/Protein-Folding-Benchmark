@@ -35,7 +35,7 @@ Model families:
 
 AlphaFold3 is included as a future optional restricted-access baseline and remains disabled by default. Its inference code is available, but model parameters and outputs are subject to the applicable Google/DeepMind terms, including non-commercial-use restrictions. Do not use AlphaFold3 for non-academic or commercial work unless rights, licensing, and any approved commercial route have been resolved.
 
-OpenFold is included as an AF2-style backend and is enabled after a two-target smoke validation. Existing OpenFold score rows come from prior single-sequence smoke outputs, but the runner now defaults to MSA mode for fresh predictions. MSA OpenFold runs require OpenFold/AlphaFold-compatible parameters, template mmCIFs, and sequence databases supplied through `OPENFOLD_DATA_DIR` and related `OPENFOLD_*` environment variables. The benchmark does not download OpenFold sequence/template databases automatically.
+OpenFold is included as an AF2-style backend and is enabled after smoke validation. The main benchmark keeps canonical model IDs (`esmfold`, `omegafold`, `boltz2`, `chai1`, `colabfold`, `openfold`) and records MSA use in `run_metadata.csv` instead of encoding it in the model name. Current default-mode `colabfold` and `openfold` runs use local ColabFold/MMseqs2 MSAs from `/data/chen/protein_folding_databases/colabfold`; suffixed IDs such as `colabfold_single`, `colabfold_msa`, `openfold_single`, and `openfold_msa` are reserved for explicit ablation studies. The benchmark does not download OpenFold, AlphaFold, or ColabFold sequence/template databases automatically.
 
 Model-specific setup notes are in `model-installation/`. Model source trees live under `models/`, which is ignored by Git, so reproducibility notes should be tracked outside model checkouts. Other backend status details are tracked in `docs/model_installation_status.md`.
 
@@ -107,6 +107,8 @@ python scripts/02_score_predictions.py \
 
 Use `--config configs/models.yaml --only-enabled-models` for benchmark score generation. This prevents stale prediction folders, such as archived or deprecated backend IDs, from contaminating the canonical CSV.
 
+Carbon tracking defaults to world-average accounting. `scripts/run_benchmark_from_targets.py --track-carbon` records `carbon_country_iso_code=WORLD`, `carbon_intensity_mode=world_average`, and applies the configurable default intensity in `scripts/carbon_tracking.py`; pass `--carbon-country-iso-code CHE` or another supported country code to override this. MSA generation is included in timing and carbon when `msa_generation_included_in_timing=true` and `msa_generation_included_in_carbon=true`.
+
 ## CSV-Driven Benchmark Pipeline
 
 For a new benchmark batch, start from a small CSV with at least:
@@ -164,7 +166,18 @@ Current enabled working models are `boltz2`, `chai1`, `esmfold`, `colabfold`, `o
 | `omegafold` | top 1 |
 | `openfold` | top 1 in the current easy pipeline setup |
 
-The easy runner defaults OpenFold to explicit `OPENFOLD_MODE=single_sequence` so the general CSV pipeline does not require full OpenFold/AF2 MSA databases. True OpenFold MSA runs require external databases and template files; see `model-installation/openfold.md`. AlphaFold2, OpenFold3, and AlphaFold3 remain disabled/future backends.
+The easy runner defaults OpenFold to explicit `OPENFOLD_MODE=single_sequence` so the general CSV pipeline does not require full OpenFold/AF2 MSA databases. True OpenFold MSA runs require external databases and template files; see `model-installation/openfold.md`. AlphaFold2 and AlphaFold3 remain disabled/future backends. OpenFold3 is installed experimentally and has passed a one-target low-memory smoke, but it remains disabled in the canonical config pending broader validation.
+
+## Experimental OpenFold3 Smoke
+
+OpenFold3 (`openfold3`) is installed experimentally in its own environment with
+checkpoint `weights/openfold3/of3-p2-155k.pt`. A one-target 7ROA low-memory smoke
+passed on 2026-05-21 under `results/backend_smoke/openfold3_default/`, producing
+`rank_001.pdb` and score/carbon metadata. Use
+`tmp/backend_smoke/models_openfold3_only.yaml` for isolated experimental runs; do
+not include `openfold3` in canonical score CSVs until broader validation is
+requested. AlphaFold2 remains blocked on official database/parameter setup rather
+than being aliased to ColabFold.
 
 Open the notebook after scoring:
 
@@ -360,9 +373,9 @@ The active target set is exactly two targets: `1UAO_chignolin` and `1UBQ_ubiquit
 | OmegaFold (`omegafold`) | yes | yes | yes | 1 | Deterministic/single-output sequence baseline. |
 | Chai-1 (`chai1`) | yes | yes | yes | 5 | Uses genuine generated samples only. |
 | Boltz-2 (`boltz2`) | yes | yes | yes | 5 | Current Boltz backend; uses genuine generated samples only. |
-| OpenFold (`openfold`) | yes | yes | yes | 1 | Single-sequence smoke validation passed again on 7ROA on 2026-05-19; full MSA mode still requires configured databases. See `model-installation/openfold.md`. |
+| OpenFold (`openfold`) | yes | yes | yes | 1 | Canonical default uses `runners/run_openfold_msa.sh` with fresh ColabFold/MMseqs2 A3M input; single-sequence mode remains an explicit ablation. See `model-installation/openfold.md`. |
 | OpenFold3 (`openfold3`) | no | no | no | 0 | AF3-style open implementation; setup pending. |
-| ColabFold (`colabfold`) | yes | yes | yes | 5 | Single-sequence GPU smoke passed on 7ROA on 2026-05-19 using local AF2-PTM parameters; no local sequence databases are required for this smoke workflow. |
+| ColabFold (`colabfold`) | yes | yes | yes | 5 | Canonical default uses local ColabFold/MMseqs2 MSA mode with AF2-PTM parameters; single-sequence mode remains an explicit ablation. |
 | AlphaFold2 (`alphafold2`) | no | no | no | 0 | Canonical AF2 baseline; full databases not required for this project unless explicitly requested. |
 | AlphaFold3 (`alphafold3`) | no | no | no | 0 | Future optional restricted/non-commercial baseline; weights and outputs require separate terms review. |
 
@@ -379,11 +392,11 @@ GPU defaults and smoke notes:
 - OmegaFold's environment sees CUDA through PyTorch and its Chignolin smoke prediction completed successfully.
 - ColabFold CUDA smoke now passes after installing `jax[cuda12]==0.5.3`; its JAX stack reports CUDA devices, and the 2026-05-19 7ROA run produced `rank_001.pdb` in `results/backend_smoke/colabfold_single_sequence/`.
 
-A one-target six-backend real smoke for `esmfold`, `omegafold`, `boltz2`, `chai1`, `colabfold`, and `openfold` passed on 7ROA on 2026-05-19 under `results/backend_smoke/six_backend_single_sequence/`. The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
+A one-target six-backend real smoke for `esmfold`, `omegafold`, `boltz2`, `chai1`, `colabfold`, and `openfold` passed on 7ROA on 2026-05-19 under `results/backend_smoke/six_backend_single_sequence/`. On 2026-05-20 the canonical default-mode config was updated so `colabfold` and `openfold` use MSA-capable default paths while the suffixed single/MSA IDs remain side experiments. The current canonical score outputs should contain 18 rows per target: ESMFold 1, OmegaFold 1, Chai-1 5, Boltz-2 5, ColabFold 5, and OpenFold 1. The cross-target aggregate summary is `data/scores/all_targets_model_summary.csv`.
 
 ## ColabFold MSA Timing/Carbon Variant
 
-The ColabFold runner supports explicit temporary model IDs for comparing no-MSA and local-MSA modes:
+The main benchmark uses canonical `colabfold` and records MSA provenance in metadata. The ColabFold runner also supports explicit ablation model IDs for comparing no-MSA and local-MSA modes:
 
 | Model ID | Meaning |
 |---|---|
@@ -394,7 +407,7 @@ Use `scripts/smoke_test_colabfold_single_vs_msa_first5_with_carbon.sh` to rerun 
 
 ## OpenFold With ColabFold-Generated MSA
 
-The OpenFold runner set includes explicit temporary model IDs for comparing dummy/single-sequence input against a freshly generated ColabFold/MMseqs2 MSA:
+The main benchmark uses canonical `openfold` and records MSA provenance in metadata. The OpenFold runner set also includes explicit ablation model IDs for comparing dummy/single-sequence input against a freshly generated ColabFold/MMseqs2 MSA:
 
 | Model ID | Meaning |
 |---|---|
@@ -402,3 +415,16 @@ The OpenFold runner set includes explicit temporary model IDs for comparing dumm
 | `openfold_msa` | OpenFold using a run-local ColabFold/MMseqs2 A3M from `/data/chen/protein_folding_databases/colabfold` |
 
 Use `scripts/smoke_test_openfold_single_vs_msa_first5_with_carbon.sh` to rerun the first-five comparison. The MSA runner removes its run-local alignment directory, runs `colabfold_search`, copies the generated A3M into OpenFold's precomputed alignment layout, and runs OpenFold inference in the same timed CodeCarbon-tracked subprocess. Results are written to `results/openfold_single_vs_msa_first5_carbon/`.
+
+## 2026-05-21 AF2/OpenFold3 Smoke Update
+
+AF2 was inspected using the official AlphaFold2 source cloned at `models/alphafold`, but no `af2` benchmark backend was added. The exact blocker is documented in `model-installation/af2.md` and `results/backend_smoke/af2_default/BLOCKED.md`: no separate AF2 environment or official AlphaFold database layout is configured, and reusing ColabFold would duplicate the existing `colabfold` backend.
+
+OpenFold3 was cloned at `models/openfold-3` and inspected. The one-target smoke was not attempted because upstream docs require CUDA 12.1+ and at least a 32 GB GPU for inference, while the local RTX A5000 GPUs expose about 24 GB each; no `openfold3` environment or model parameters are installed. Details are in `model-installation/openfold3.md` and `results/backend_smoke/openfold3_default/BLOCKED.md`.
+
+
+## Experimental Shared-MSA Backends
+
+A reusable ColabFold/MMseqs2 MSA cache workflow is available for experimental backends. `scripts/generate_colabfold_msas_from_targets.py` writes per-target A3M files and `msa_metadata.csv`; `scripts/run_benchmark_from_targets.py` can pass those rows into runners with `--shared-msa-metadata` and `--shared-msa-root`. Model inference metadata marks the shared MSA as reused and excludes MSA search from model timing/carbon; `scripts/summarize_shared_msa_benchmark.py` joins MSA cost, inference cost, and structure scores.
+
+On 2026-05-22, `protenix` and `openfold3` both passed a first-five shared-MSA smoke under `results/protenix_openfold3_shared_msa_first5/`. These remain experimental and disabled in the canonical config.

@@ -34,7 +34,7 @@ These backends are intentionally inactive:
 | Backend ID | Status | Reason |
 |---|---|---|
 | `alphafold2` | disabled/future | Full AF2 database setup is not available locally. |
-| `openfold3` | disabled/future | Setup and validation pending. |
+| `openfold3` | experimental/disabled by default | Environment, checkpoint, and runner installed; 7ROA low-memory smoke passed, but broader validation is still pending. |
 | `alphafold3` | disabled/future | Restricted-access weights/outputs and terms review required. |
 
 Do not download AlphaFold/OpenFold MSA/template databases as part of routine
@@ -215,6 +215,16 @@ BOLTZ_ACCELERATOR=gpu bash runners/run_boltz2.sh data/sequences/1UAO_chignolin.f
 ```
 
 2026-05-19 new-machine validation: Boltz-2 was installed into the separate `boltz` environment from `models/boltz` and passed the 7ROA real-controller smoke with `top_k=1`; combined real smoke for `esmfold,omegafold,boltz2` is recorded under `results/real_backend_smoke/`.
+
+### OpenFold3
+
+- Backend ID: `openfold3`
+- Environment: `openfold3`
+- Runner: `runners/run_openfold3.sh`
+- Status: experimentally installed, disabled in canonical config.
+- 2026-05-21 validation: 7ROA low-memory smoke passed under `results/backend_smoke/openfold3_default/` with one `rank_001.pdb`, score CSVs, and carbon metadata.
+- Use `tmp/backend_smoke/models_openfold3_only.yaml` for isolated smoke runs.
+- Detailed notes: [OpenFold3 setup](../model-installation/openfold3.md)
 
 ### Chai-1
 
@@ -425,3 +435,16 @@ Once external storage is available:
 ## 2026-05-20 OpenFold MSA Handoff Update
 
 OpenFold now has a validated ColabFold-MSA smoke path through `runners/run_openfold_msa.sh`. The runner regenerates ColabFold/MMseqs2 MSAs inside the benchmarked subprocess and feeds the generated A3M into OpenFold as a run-local precomputed alignment. The first-five carbon-tracked comparison is under `results/openfold_single_vs_msa_first5_carbon/`.
+
+
+## 2026-05-20 Canonical Names, MSA Metadata, And World Carbon Update
+
+Default benchmark comparisons use canonical model IDs: `esmfold`, `omegafold`, `boltz2`, `chai1`, `colabfold`, and `openfold`. MSA usage is now recorded in `run_metadata.csv` columns (`msa_used`, `msa_source`, `msa_mode`, database path, timing/carbon inclusion, reuse, and notes) instead of being encoded in the main model name. Suffixed IDs such as `colabfold_single`, `colabfold_msa`, `openfold_single`, and `openfold_msa` remain available only for explicit ablation studies.
+
+CodeCarbon tracking now defaults to world-average accounting (`--carbon-country-iso-code WORLD`) and records `carbon_region`, `carbon_intensity_mode`, `carbon_intensity_g_per_kwh`, and `carbon_intensity_source`. Use `--carbon-country-iso-code CHE` for Switzerland-specific accounting.
+
+## 2026-05-21 AF2/OpenFold3 Smoke Update
+
+AF2 was inspected using the official AlphaFold2 source cloned at `models/alphafold`, but no `af2` benchmark backend was added. The exact blocker is documented in `model-installation/af2.md` and `results/backend_smoke/af2_default/BLOCKED.md`: no separate AF2 environment or official AlphaFold database layout is configured, and reusing ColabFold would duplicate the existing `colabfold` backend.
+
+OpenFold3 was cloned at `models/openfold-3` and inspected. The one-target smoke was not attempted because upstream docs require CUDA 12.1+ and at least a 32 GB GPU for inference, while the local RTX A5000 GPUs expose about 24 GB each; no `openfold3` environment or model parameters are installed. Details are in `model-installation/openfold3.md` and `results/backend_smoke/openfold3_default/BLOCKED.md`.
