@@ -14,6 +14,17 @@ conda run -n chai1 python -m pip install chai_lab==0.6.1
 
 The installed package reports `chai_lab==0.6.1` and PyTorch `2.6.0+cu124` with CUDA visible. The local `models/chai-lab` checkout was used for setup inspection; the runtime package was installed from the pinned PyPI release.
 
+
+## MSA / Template Mode
+
+The local default benchmark runner does not provide external MSAs or templates to Chai-1. Chai-1 supports optional external MSA/template inputs, but this benchmark records the default runner as:
+
+```text
+msa_used=false
+msa_source=none
+msa_mode=native_embedding_no_msa
+```
+
 Current runner:
 
 ```bash

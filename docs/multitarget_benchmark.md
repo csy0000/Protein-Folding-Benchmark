@@ -51,6 +51,8 @@ Current canonical score CSVs contain 18 rows per target: ESMFold 1, OmegaFold 1,
 
 Carbon tracking defaults to world-average accounting when `--track-carbon` is used without `--carbon-country-iso-code`; pass `--carbon-country-iso-code CHE` or another supported country code for country-specific accounting. MSA generation is counted in timing/carbon when the metadata columns `msa_generation_included_in_timing` and `msa_generation_included_in_carbon` are true. A combined six-backend 7ROA single-sequence smoke passed under `results/backend_smoke/six_backend_single_sequence/`; the canonical default-mode smoke config is `tmp/backend_smoke/models_six_default_modes.yaml`.
 
+Chai-1 default metadata is classified as `msa_used=false`, `msa_source=none`, and `msa_mode=native_embedding_no_msa`; the local runner does not provide external MSAs/templates.
+
 Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker.
 
 For every future Codex instruction, write a dated execution log under `codex-plan/` using the `YYYYMMDD_` filename prefix.

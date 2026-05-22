@@ -232,6 +232,7 @@ BOLTZ_ACCELERATOR=gpu bash runners/run_boltz2.sh data/sequences/1UAO_chignolin.f
 - Environment: `chai1`
 - Runner: `runners/run_chai1.sh`
 - Converts FASTA headers into Chai-compatible `protein|name=...` records.
+- Default local benchmark mode does not provide MSAs/templates; metadata records `native_embedding_no_msa`.
 - Produces up to five genuine samples.
 - Defaults to CPU at the runner layer; use `CHAI1_DEVICE=cuda:0` for CUDA. The
   CSV benchmark driver injects this by default.

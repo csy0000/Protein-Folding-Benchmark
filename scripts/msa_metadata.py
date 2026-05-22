@@ -123,7 +123,10 @@ def infer_msa_metadata(model_name: str, model_cfg: dict[str, Any] | None = None)
     elif model_name == "boltz2":
         metadata = _no_msa("model_default_no_msa", "Boltz-2 runner provides an explicit empty MSA and runs single-sequence mode")
     elif model_name == "chai1":
-        metadata = _base(msa_notes="MSA usage not confirmed from Chai-1 runner/logs; runner passes FASTA only")
+        metadata = _no_msa(
+            "native_embedding_no_msa",
+            "Chai-1 default CLI uses embeddings without MSAs/templates; external MSAs are optional",
+        )
     elif model_name == "colabfold":
         metadata = _colabfold_msa("default_msa", "Default ColabFold MSA mode; MSA search included in timing/carbon")
     elif model_name == "openfold":

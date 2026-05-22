@@ -36,10 +36,14 @@ models:
   chai1:
     enabled: true
     runner: bash runners/run_chai1.sh
-    msa_used: unknown
-    msa_source: unknown
-    msa_mode: model_default_unknown
-    msa_notes: "MSA usage not confirmed from Chai-1 runner/logs; runner passes FASTA only"
+    msa_used: false
+    msa_source: none
+    msa_mode: native_embedding_no_msa
+    msa_database: none
+    msa_generation_included_in_timing: false
+    msa_generation_included_in_carbon: false
+    msa_reused: false
+    msa_notes: "Chai-1 default CLI uses embeddings without MSAs/templates; external MSAs are optional"
 
   esmfold:
     enabled: true
