@@ -1,36 +1,58 @@
 # AF2 Setup Notes
 
-Backend ID: `af2` (not enabled)  
-Related existing placeholder: `alphafold2`  
-Environment: `af2` or `alphafold2` (not installed)  
-Source checkout: `models/alphafold` at `c77e5d2a8961d1a353632c462914ff0a32a950f6`  
-Status: blocked / not validated as of 2026-05-21.
+Backend ID: `af2`
+Environment: `af2`
+Source checkout: `models/alphafold` at `c77e5d2a8961d1a353632c462914ff0a32a950f6`
+Database root: `/data/chen/protein_folding_databases/alphafold`
+Status: validated on 2026-05-26 for the first-five CASP smoke set.
 
-Official AlphaFold2 source was inspected, but no AF2 benchmark runner was added.
-A valid `af2` backend must be distinct from the existing `colabfold` backend.
-Reusing ColabFold with AlphaFold2-style weights would duplicate an already
-enabled implementation and must not be reported as AF2.
+Official AlphaFold2 is implemented as a distinct backend and is not an alias for
+ColabFold. The runner uses the standard benchmark interface:
 
-Exact blocker for the 7ROA one-target smoke:
+```bash
+bash runners/run_af2.sh input.fasta output_dir top_k
+```
 
-- No separate AF2 conda environment is installed.
-- No official AlphaFold database layout was found under `/data/chen`.
-- Official AlphaFold2 inference expects model parameters plus full or reduced
-  genetic/template databases, including paths such as UniRef90, MGnify, PDB70,
-  PDB mmCIF, and small BFD for reduced DB mode.
-- Upstream documentation reports about 556 GB to download and 2.62 TB
-  uncompressed for the full database setup; reduced DB mode still requires
-  hundreds of GB.
-- The task did not authorize downloading full AlphaFold/OpenFold databases.
-- Existing local ColabFold/MMseqs assets support the `colabfold` backend, not a
-  distinct official AF2 backend.
-- `--use_precomputed_msas` is not a complete bypass for official setup here; the
-  official script still validates required parameter/database/template paths and
-  expects AlphaFold-compatible precomputed output layout.
+The current wrapper calls `scripts/run_af2_split_pipeline.py`, which imports the
+official DeepMind AlphaFold source from `models/alphafold`, runs full official
+MSA/template feature generation, writes `features.pkl`, then runs JAX inference
+for the requested top-k subset of official monomer models. The 2026-05-26 run
+used `top_k=1`, `model_1`, `model_preset=monomer`, `db_preset=full_dbs`, and
+disabled Amber relaxation.
 
-Output diagnostic: `results/backend_smoke/af2_default/BLOCKED.md`.
+MSA metadata for `af2` is:
 
-A future approved route would create an isolated `af2`/`alphafold2` environment,
-install the official AlphaFold dependencies, download parameters plus the reduced
-or full official database tree to an explicit `/data/chen/...` location, and then
-add a real runner around `models/alphafold/run_alphafold.py`.
+- `msa_used=true`
+- `msa_source=alphafold2_default`
+- `msa_mode=official_af2_database_search`
+- `msa_database=alphafold`
+- `msa_database_path=/data/chen/protein_folding_databases/alphafold`
+- `msa_generation_included_in_timing=true`
+- `msa_generation_included_in_carbon=true`
+- `msa_reused=false`
+
+Split-stage outputs are recorded in:
+
+- `results/af2_first5_split_carbon/run_metadata.csv`
+- `results/af2_first5_split_carbon/af2_stage_metadata.csv`
+- per-target `metadata.json` under `results/af2_first5_split_carbon/predictions/<target>/af2/`
+
+First-five result summary from `results/af2_first5_split_carbon/scores/all_targets_model_summary.csv`:
+
+- `n_targets_success=5`
+- mean lDDT-C-alpha: `0.8754336456168662`
+- mean TM-score normalized by reference length: `0.852168`
+- mean C-alpha RMSD: `4.02535248453391`
+
+Mean split cost from `run_metadata.csv`:
+
+- MSA/features runtime: `1723.634842` seconds per target
+- MSA/features CO2e: `45.1201802476462` g per target
+- AF2 inference runtime: `130.4129638` seconds per target
+- AF2 inference CO2e: `4.496196255893913` g per target
+- Total runtime: `1854.0478058` seconds per target
+- Total CO2e: `49.61637650354013` g per target
+
+The backend remains disabled in `configs/models.yaml` so routine canonical runs
+do not unexpectedly launch the full official AlphaFold database search. Use
+`tmp/backend_smoke/models_af2_only.yaml` for isolated AF2 runs.

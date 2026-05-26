@@ -69,9 +69,15 @@ A first-five carbon-tracked OpenFold comparison is available under `results/open
 
 ## 2026-05-21 AF2/OpenFold3 Smoke Update
 
-AF2 was inspected using the official AlphaFold2 source cloned at `models/alphafold`, but no `af2` benchmark backend was added. The exact blocker is documented in `model-installation/af2.md` and `results/backend_smoke/af2_default/BLOCKED.md`: no separate AF2 environment or official AlphaFold database layout is configured, and reusing ColabFold would duplicate the existing `colabfold` backend.
+The 2026-05-21 AF2 inspection was initially blocked by missing official AF2 environment/database setup. That blocker is superseded by the 2026-05-26 official `af2` first-five run below.
 
 OpenFold3 is installed experimentally in the separate `openfold3` environment and passed a 7ROA one-target low-memory smoke under `results/backend_smoke/openfold3_default/`. The run produced `rank_001.pdb`, scored successfully, and recorded runtime/carbon metadata. It remains disabled in the canonical config pending broader validation; use `tmp/backend_smoke/models_openfold3_only.yaml` for isolated experimental runs. Details are in `model-installation/openfold3.md`.
+
+## 2026-05-26 Official AF2 split-stage first-five run
+
+Official AlphaFold2 is available as backend ID `af2`, disabled by default in `configs/models.yaml`. The run in `results/af2_first5_split_carbon/` used `tmp/backend_smoke/models_af2_only.yaml`, `top_k=1`, full official AlphaFold databases at `/data/chen/protein_folding_databases/alphafold`, and split CodeCarbon tracking for `msa_features` versus `inference`.
+
+`run_status.csv` reports 5/5 successful targets. `af2_stage_metadata.csv` has two rows per target and records `msa_source=alphafold2_default`, `msa_mode=official_af2_database_search`, MSA/features runtime/carbon, and JAX inference runtime/carbon. The score summary reports mean lDDT-C-alpha `0.8754336456168662`, mean TM-score-ref `0.852168`, and mean C-alpha RMSD `4.02535248453391`.
 
 
 ## Shared ColabFold MSA Cache Smoke (2026-05-22)
@@ -107,3 +113,9 @@ conda run -n folding-benchmark python scripts/run_benchmark_from_targets.py \
 ```
 
 The 2026-05-22 first-five run succeeded for `protenix` and `openfold3` on all five targets. Model inference rows exclude shared MSA generation from timing/carbon; combined totals are written to `results/protenix_openfold3_shared_msa_first5/shared_msa_score_cost_summary.csv`.
+
+## 2026-05-22 Unified four-model shared-MSA first-five run
+
+The latest shared-MSA side study is stored in `results/four_msa_models_shared_msa_first5/`. It generates one ColabFold/MMseqs2 A3M per target under `results/four_msa_models_shared_msa_first5/msa/`, then reuses that same target-specific A3M for `colabfold`, `openfold`, `protenix`, and `openfold3`. Model inference metadata marks `msa_generation_included_in_timing=false`, `msa_generation_included_in_carbon=false`, and `msa_reused=true` for all four models.
+
+The run used `tmp/backend_smoke/models_four_msa_shared.yaml`, `top_k=1`, and CodeCarbon world-average accounting. Combined score/cost rows are written to `results/four_msa_models_shared_msa_first5/shared_msa_score_cost_summary.csv`.

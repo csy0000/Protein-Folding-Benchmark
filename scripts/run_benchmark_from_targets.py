@@ -21,9 +21,10 @@ from msa_metadata import MSA_METADATA_COLUMNS, infer_msa_metadata, shared_msa_me
 
 
 SINGLE_OUTPUT_MODELS = {"esmfold", "omegafold", "openfold", "openfold_single", "openfold_msa"}
-MODEL_ORDER_PRIORITY = ["colabfold", "colabfold_single", "colabfold_msa", "openfold", "openfold_single", "openfold_msa"]
+MODEL_ORDER_PRIORITY = ["colabfold", "colabfold_single", "colabfold_msa", "openfold", "openfold_single", "openfold_msa", "af2"]
 
 GPU_DEFAULT_ENV = {
+    "af2": {"AF2_CARBON_COUNTRY_ISO_CODE": "WORLD"},
     "boltz2": {"BOLTZ_ACCELERATOR": "gpu"},
     "chai1": {"CHAI1_DEVICE": "cuda:0"},
     "esmfold": {"ESMFOLD_CPU_ONLY": "0"},
@@ -36,6 +37,23 @@ CONSERVATIVE_GPU_ENV = {
     "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
     "TF_FORCE_GPU_ALLOW_GROWTH": "true",
 }
+
+RUNNER_METADATA_COLUMNS = [
+    "msa_feature_runtime_sec",
+    "msa_feature_carbon_emissions_g",
+    "msa_feature_energy_consumed_kwh",
+    "af2_inference_runtime_sec",
+    "af2_inference_carbon_emissions_g",
+    "af2_inference_energy_consumed_kwh",
+    "total_runtime_sec",
+    "total_carbon_emissions_g",
+    "total_energy_consumed_kwh",
+    "af2_db_preset",
+    "af2_model_preset",
+    "af2_params_dir",
+    "af2_data_dir",
+    "af2_features_dir",
+]
 
 
 def load_targets(path: Path) -> list[dict[str, str]]:
@@ -101,6 +119,7 @@ def write_prediction_metadata(
     successful_trial: int | str,
     error: str = "",
     msa_metadata: dict[str, str] | None = None,
+    runner_metadata: dict[str, object] | None = None,
 ) -> None:
     metadata = {
         "target_id": target_id,
@@ -118,6 +137,8 @@ def write_prediction_metadata(
     }
     if msa_metadata:
         metadata.update({key: value for key, value in msa_metadata.items() if key.startswith("msa_") or key.startswith("shared_msa_")})
+    if runner_metadata:
+        metadata.update({key: value for key, value in runner_metadata.items() if key in RUNNER_METADATA_COLUMNS})
     (model_out / "prediction_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
 
@@ -145,6 +166,7 @@ METADATA_COLUMNS = [
     "command",
     "error_message",
     *MSA_METADATA_COLUMNS,
+    *RUNNER_METADATA_COLUMNS,
     *CARBON_METADATA_COLUMNS,
 ]
 
@@ -205,6 +227,7 @@ def timing_rows_for_run(
     error_message: str,
     carbon_metadata: dict[str, object] | None = None,
     msa_metadata: dict[str, object] | None = None,
+    runner_metadata: dict[str, object] | None = None,
 ) -> list[dict[str, object]]:
     ranks = sorted(model_out.glob("rank_*.pdb")) if success else []
     prediction_count = len(ranks)
@@ -228,6 +251,9 @@ def timing_rows_for_run(
     if msa_metadata is None:
         msa_metadata = {column: "" for column in MSA_METADATA_COLUMNS}
     base.update(msa_metadata)
+    if runner_metadata is None:
+        runner_metadata = {column: "" for column in RUNNER_METADATA_COLUMNS}
+    base.update({column: runner_metadata.get(column, "") for column in RUNNER_METADATA_COLUMNS})
     if carbon_metadata is None:
         carbon_metadata = empty_carbon_metadata(False)
     base.update(carbon_metadata)
@@ -276,6 +302,18 @@ def target_shared_msa_row(
     if not a3m_file.exists():
         raise SystemExit(f"Shared MSA A3M does not exist for {target_id}: {a3m_file}")
     return row, msa_dir, a3m_file
+
+
+def load_runner_metadata(model_out: Path) -> dict[str, object]:
+    metadata_path = model_out / "metadata.json"
+    if not metadata_path.exists():
+        return {}
+    try:
+        with metadata_path.open() as f:
+            metadata = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"runner_metadata_error": repr(exc)}
+    return {column: metadata.get(column, "") for column in RUNNER_METADATA_COLUMNS}
 
 
 def run_status_row_for_run(
@@ -550,6 +588,10 @@ def main() -> None:
                 if model_name == "openfold" and args.openfold_mode != "config":
                     env["OPENFOLD_MODE"] = args.openfold_mode
                     mode = args.openfold_mode
+                if model_name == "af2":
+                    env["AF2_TARGET_PDB_ID"] = target.get("pdb_id", "")
+                    env["AF2_TARGET_CHAIN_ID"] = target.get("chain_id", "")
+                    env.setdefault("AF2_STAGE_METADATA_CSV", str(Path(args.results_dir) / "af2_stage_metadata.csv"))
                 if args.dry_run:
                     cmd = shlex.split(str(model_cfg["runner"])) + [str(fasta), str(model_out), str(args.top_k)]
                     aggregate.write("[dry-run] " + " ".join(shlex.quote(part) for part in cmd) + "\n")
@@ -585,6 +627,7 @@ def main() -> None:
                         args.max_trials,
                     )
                 carbon_metadata = carbon_tracker.stop()
+                runner_metadata = load_runner_metadata(model_out)
                 write_prediction_metadata(
                     model_out,
                     target_id,
@@ -598,6 +641,7 @@ def main() -> None:
                     successful_trial,
                     error,
                     msa_metadata,
+                    runner_metadata,
                 )
                 append_metadata_rows(
                     run_metadata,
@@ -615,6 +659,7 @@ def main() -> None:
                         error,
                         carbon_metadata,
                         msa_metadata,
+                        runner_metadata,
                     ),
                 )
                 append_run_status_row(

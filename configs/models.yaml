@@ -61,6 +61,25 @@ models:
     msa_generation_included_in_carbon: true
     msa_reused: false
 
+  af2:
+    enabled: false
+    runner: env AF2_DATA_DIR=/data/chen/protein_folding_databases/alphafold AF2_MODEL_PRESET=monomer AF2_DB_PRESET=full_dbs bash runners/run_af2.sh
+    env_name: af2
+    repo_dir: models/alphafold
+    mode: official_af2_database_search
+    params_dir: /data/chen/protein_folding_databases/alphafold/params
+    data_dir: /data/chen/protein_folding_databases/alphafold
+    output_subdir: af2
+    msa_used: true
+    msa_source: alphafold2_default
+    msa_mode: official_af2_database_search
+    msa_database: alphafold
+    msa_database_path: /data/chen/protein_folding_databases/alphafold
+    msa_generation_included_in_timing: true
+    msa_generation_included_in_carbon: true
+    msa_reused: false
+    notes: "Official AlphaFold2 backend. Disabled by default; use tmp/backend_smoke/models_af2_only.yaml for isolated split-stage runs."
+
   alphafold2:
     enabled: false
     runner: bash runners/run_alphafold2.sh

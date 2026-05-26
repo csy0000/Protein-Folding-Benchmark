@@ -88,21 +88,24 @@ def default_table(summary_path: Path, metadata_path: Path) -> str:
                 time=fmt(mean([f(r["inference_time_sec"]) for r in rows]), 1),
                 carbon=fmt(mean([f(r["carbon_emissions_g"]) for r in rows]), 2),
                 msa_cost="yes" if first.get("msa_generation_included_in_carbon") == "true" else "no",
-                note=notes[model],
+                note=notes.get(model, "shared ColabFold/MMseqs2 A3M reused"),
             )
         )
     return "\n".join(lines)
 
 
-def shared_table(summary_path: Path, cost_path: Path) -> str:
+def shared_table(summary_path: Path, cost_path: Path, order: list[str] | None = None) -> str:
     summary = summary_by_model(summary_path)
     grouped = model_rows(read_csv(cost_path))
-    order = ["protenix", "openfold3"]
+    if order is None:
+        order = ["protenix", "openfold3"]
     lines = [
         "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean Ca RMSD (A) | Mean model time (s) | Mean model CO2e (g) | Mean total time with shared MSA (s) | Mean total CO2e with shared MSA (g) | Notes |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     notes = {
+        "colabfold": "shared A3M used directly as ColabFold input; no MMseqs search inside model runner",
+        "openfold": "shared A3M copied into OpenFold precomputed-alignment layout",
         "protenix": "shared A3M converted to Protenix paired/unpaired inputs",
         "openfold3": "shared A3M copied as cfdb_hits.a3m; low-memory experimental run",
     }
@@ -120,7 +123,7 @@ def shared_table(summary_path: Path, cost_path: Path) -> str:
                 mcarbon=fmt(mean([f(r["model_carbon_emissions_g"]) for r in rows]), 2),
                 ttime=fmt(mean([f(r["total_time_with_shared_msa_sec"]) for r in rows]), 1),
                 tcarbon=fmt(mean([f(r["total_carbon_with_shared_msa_g"]) for r in rows]), 2),
-                note=notes[model],
+                note=notes.get(model, "shared ColabFold/MMseqs2 A3M reused"),
             )
         )
     return "\n".join(lines)
@@ -167,11 +170,12 @@ def main() -> None:
             Path("results/default_modes_first5_carbon_metadata/run_metadata.csv"),
         ),
         "",
-        "### Shared-MSA experimental first-five benchmark",
+        "### Unified shared-MSA first-five benchmark",
         "",
         shared_table(
-            Path("results/protenix_openfold3_shared_msa_first5/scores/all_targets_model_summary.csv"),
-            Path("results/protenix_openfold3_shared_msa_first5/shared_msa_score_cost_summary.csv"),
+            Path("results/four_msa_models_shared_msa_first5/scores/all_targets_model_summary.csv"),
+            Path("results/four_msa_models_shared_msa_first5/shared_msa_score_cost_summary.csv"),
+            ["colabfold", "openfold", "protenix", "openfold3"],
         ),
         "",
         "### ColabFold single-sequence vs MSA ablation",

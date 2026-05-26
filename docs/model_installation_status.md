@@ -9,7 +9,7 @@
 | Chai-1 | `chai1` | `chai1` | `models/chai-lab` | yes | yes | yes | 5 | yes | Runner defaults to CPU via `CHAI1_DEVICE=cpu`; Chignolin CUDA smoke passed with `CHAI1_DEVICE=cuda:0`. Default benchmark mode is no-MSA/native embedding (`native_embedding_no_msa`); external MSAs/templates are optional in Chai-1 but not used by this runner. |
 | ESMFold | `esmfold` | `esmfold` | `models/esm` | yes | yes | yes | 1 | yes | Runner defaults to CPU-only mode; Chignolin CUDA smoke passed with `ESMFOLD_CPU_ONLY=0`. Uses local ESM source, project-local Torch cache, and a checkpoint-key compatibility shim. |
 | ColabFold | `colabfold` | `colabfold` | n/a | yes | yes | yes | 5 | yes | Installed from PyPI package `colabfold[alphafold]`; canonical default uses local ColabFold/MMseqs2 MSA mode with AF2-PTM parameters under `weights/colabfold`. `colabfold_single`/`colabfold_msa` remain explicit ablation IDs. |
-| AlphaFold2 | `alphafold2` | `alphafold2` | `models/alphafold` | yes | yes | no | 0 | no | Official source checkout exists, but no `af2`/`alphafold2` env, official parameters, or AlphaFold database layout are configured. Reusing ColabFold would duplicate the enabled `colabfold` backend. |
+| AlphaFold2 | `af2` | `af2` | `models/alphafold` | yes | yes | first-five CASP smoke | 1 | yes | Official DeepMind AlphaFold2 backend validated on 2026-05-26 with full AlphaFold database search, split MSA/features and JAX inference carbon metadata, and 5/5 first-five targets successful. Disabled in canonical config; use `tmp/backend_smoke/models_af2_only.yaml`. |
 | AlphaFold3 | `alphafold3` | `alphafold3` | `models/alphafold3` | repo cloned | yes | no | 0 | no | Restricted-access baseline; weights require separate approval/terms. Placeholder environment and runner added. |
 | OmegaFold | `omegafold` | `omegafold` | `models/OmegaFold` | yes | yes | yes | 1 | yes | Single-sequence baseline; produced `rank_001.pdb` and scoring succeeded. |
 
@@ -61,7 +61,7 @@ AlphaFold3 remains disabled as a future restricted/non-commercial-use backend an
 
 ## 2026-05-21 AF2/OpenFold3 Smoke Update
 
-AF2 was inspected using the official AlphaFold2 source cloned at `models/alphafold`, but no `af2` benchmark backend was added. The exact blocker is documented in `model-installation/af2.md` and `results/backend_smoke/af2_default/BLOCKED.md`: no separate AF2 environment or official AlphaFold database layout is configured, and reusing ColabFold would duplicate the existing `colabfold` backend.
+The 2026-05-21 AF2 attempt was initially blocked by missing official AF2 environment/database setup. That blocker is superseded by the 2026-05-26 official `af2` first-five run documented below.
 
 OpenFold3 is installed experimentally in the separate `openfold3` environment with PyPI `openfold3==0.4.1`, env-local CUDA toolkit 12.8, and checkpoint `weights/openfold3/of3-p2-155k.pt`. A 7ROA one-target low-memory smoke succeeded under `results/backend_smoke/openfold3_default/` with `rank_001.pdb`, runtime `82.752562` seconds, `2.3836289056808897` g CO2e, lDDT-C-alpha `0.4756351915054986`, and TM-score normalized by reference length `0.39914`. It remains disabled in the canonical config pending broader validation; details are in `model-installation/openfold3.md`.
 
@@ -87,3 +87,13 @@ Summary files:
 - `results/protenix_openfold3_shared_msa_first5/shared_msa_score_cost_summary.csv`
 
 These backends remain experimental and are not enabled in `configs/models.yaml`.
+
+## 2026-05-22 unified shared-MSA status
+
+`colabfold`, `openfold`, `protenix`, and `openfold3` all completed the first-five target set using the same per-target ColabFold/MMseqs2 A3M cache in `results/four_msa_models_shared_msa_first5/msa/`. The ColabFold shared runner passes the A3M directly to `colabfold_batch`; the OpenFold shared runner copies it into a precomputed-alignment layout; Protenix and OpenFold3 use their existing shared-MSA adapters. All 20 target/model inference rows succeeded and were scored.
+
+## 2026-05-26 Official AF2 Split-Stage Update
+
+Official AlphaFold2 is installed as backend ID `af2` in the separate `af2` environment. The runner `runners/run_af2.sh` calls `scripts/run_af2_split_pipeline.py`, imports DeepMind AlphaFold from `models/alphafold`, uses `/data/chen/protein_folding_databases/alphafold`, and records split-stage metadata for `msa_features` and `inference` in `af2_stage_metadata.csv`.
+
+The first-five run under `results/af2_first5_split_carbon/` produced 5/5 successful `rank_001.pdb` predictions and scored successfully with mean lDDT-C-alpha `0.8754336456168662`, mean TM-score-ref `0.852168`, and mean C-alpha RMSD `4.02535248453391`. Mean total runtime was `1854.0478058` seconds per target, with mean total CO2e `49.61637650354013` g per target.

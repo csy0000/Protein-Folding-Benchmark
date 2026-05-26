@@ -1,0 +1,16 @@
+models:
+  af2:
+    enabled: true
+    runner: env AF2_DATA_DIR=/data/chen/protein_folding_databases/alphafold AF2_MODEL_PRESET=monomer AF2_DB_PRESET=full_dbs AF2_MAX_TEMPLATE_DATE=2026-05-26 bash runners/run_af2.sh
+    env_name: af2
+    repo_dir: models/alphafold
+    mode: official_af2_database_search
+    msa_used: true
+    msa_source: alphafold2_default
+    msa_mode: official_af2_database_search
+    msa_database: alphafold
+    msa_database_path: /data/chen/protein_folding_databases/alphafold
+    msa_generation_included_in_timing: true
+    msa_generation_included_in_carbon: true
+    msa_reused: false
+    msa_notes: "Official AlphaFold2 database search and template feature generation; split stage metadata records MSA/features separately from JAX inference."
