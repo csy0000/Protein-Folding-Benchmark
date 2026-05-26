@@ -147,7 +147,15 @@ The README performance tables use:
 - OpenFold ablation: `results/openfold_single_vs_msa_first5_carbon/`
 - Official AlphaFold2 split-stage benchmark: `results/af2_first5_split_carbon/`
 
-Carbon4Science exports live under `/home/chen/projects/carbon4science.github.io/results/`. The clean latest export contains `benchmark-score.csv`, `benchmark-metadata.csv`, and one JSON file per exported model (`esmfold.json`, `omegafold.json`, `boltz2.json`, `chai1.json`, `colabfold.json`, `openfold.json`, `protenix.json`, `openfold3.json`, `af2.json`).
+The consolidated latest all-model collection is written under `results/consolidated/`:
+
+- `benchmark_metadata_all_models.csv` records runtime, carbon, hardware, MSA provenance, and source-result directory per target/model.
+- `benchmark_scores_all_models.csv` records the corresponding structure scores.
+- `benchmark_model_summary_all_models.csv` records one row per model.
+- `benchmark_collection_manifest.csv` records the source files used and cleanup disposition for result artifacts.
+- `benchmark_collection_notes.md` describes source selection and caveats.
+
+Carbon4Science exports live under `/home/chen/projects/carbon4science.github.io/results/`. The clean latest export contains `benchmark-score.csv`, `benchmark-metadata.csv`, one JSON file per exported model (`esmfold.json`, `omegafold.json`, `boltz2.json`, `chai1.json`, `colabfold.json`, `openfold.json`, `protenix.json`, `openfold3.json`, `af2.json`), plus the four consolidated all-model CSVs above. Superseded smoke/test result directories are archived, not deleted, under `results/_archived_test_artifacts_20260526/`.
 
 ## Environment Policy
 

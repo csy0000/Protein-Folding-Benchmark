@@ -119,3 +119,23 @@ The 2026-05-22 first-five run succeeded for `protenix` and `openfold3` on all fi
 The latest shared-MSA side study is stored in `results/four_msa_models_shared_msa_first5/`. It generates one ColabFold/MMseqs2 A3M per target under `results/four_msa_models_shared_msa_first5/msa/`, then reuses that same target-specific A3M for `colabfold`, `openfold`, `protenix`, and `openfold3`. Model inference metadata marks `msa_generation_included_in_timing=false`, `msa_generation_included_in_carbon=false`, and `msa_reused=true` for all four models.
 
 The run used `tmp/backend_smoke/models_four_msa_shared.yaml`, `top_k=1`, and CodeCarbon world-average accounting. Combined score/cost rows are written to `results/four_msa_models_shared_msa_first5/shared_msa_score_cost_summary.csv`.
+
+## 2026-05-26 Consolidated Latest All-Model Results
+
+The latest consolidated all-model collection is under `results/consolidated/`.
+It combines first-five rows for `esmfold`, `omegafold`, `boltz2`, `chai1`,
+`colabfold`, `openfold`, `protenix`, `openfold3`, and `af2`. Default/native
+models come from `results/default_modes_first5_carbon_metadata/`; shared-MSA
+models come from `results/four_msa_models_shared_msa_first5/`; official AF2
+comes from `results/af2_first5_split_carbon/`.
+
+The exported tables are:
+
+- `benchmark_metadata_all_models.csv`
+- `benchmark_scores_all_models.csv`
+- `benchmark_model_summary_all_models.csv`
+- `benchmark_collection_manifest.csv`
+
+The same four CSVs are copied to `/home/chen/projects/carbon4science.github.io/results/`.
+Superseded smoke/test directories are archived under
+`results/_archived_test_artifacts_20260526/`.

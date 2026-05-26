@@ -444,8 +444,19 @@ Default benchmark comparisons use canonical model IDs: `esmfold`, `omegafold`, `
 
 CodeCarbon tracking now defaults to world-average accounting (`--carbon-country-iso-code WORLD`) and records `carbon_region`, `carbon_intensity_mode`, `carbon_intensity_g_per_kwh`, and `carbon_intensity_source`. Use `--carbon-country-iso-code CHE` for Switzerland-specific accounting.
 
-## 2026-05-21 AF2/OpenFold3 Smoke Update
+## 2026-05-26 Consolidated AF2/OpenFold3 Update
 
-AF2 was inspected using the official AlphaFold2 source cloned at `models/alphafold`, but no `af2` benchmark backend was added. The exact blocker is documented in `model-installation/af2.md` and `results/backend_smoke/af2_default/BLOCKED.md`: no separate AF2 environment or official AlphaFold database layout is configured, and reusing ColabFold would duplicate the existing `colabfold` backend.
+The older 2026-05-21 AF2/OpenFold3 blockers are superseded. Official AlphaFold2
+now exists as backend ID `af2`, disabled by default, with a first-five
+split-stage run in `results/af2_first5_split_carbon/`. The run uses
+`models/alphafold`, `/data/chen/protein_folding_databases/alphafold`, and
+records separate MSA/features and JAX inference timing/carbon fields.
 
-OpenFold3 was cloned at `models/openfold-3` and inspected. The one-target smoke was not attempted because upstream docs require CUDA 12.1+ and at least a 32 GB GPU for inference, while the local RTX A5000 GPUs expose about 24 GB each; no `openfold3` environment or model parameters are installed. Details are in `model-installation/openfold3.md` and `results/backend_smoke/openfold3_default/BLOCKED.md`.
+OpenFold3 is installed experimentally in the `openfold3` environment and is
+reported in the shared-MSA first-five collection through
+`results/four_msa_models_shared_msa_first5/`. The backend remains disabled in
+canonical config pending broader validation.
+
+The latest all-model first-five collection is consolidated in
+`results/consolidated/` and exported to
+`/home/chen/projects/carbon4science.github.io/results/`.

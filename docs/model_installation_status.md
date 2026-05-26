@@ -97,3 +97,13 @@ These backends remain experimental and are not enabled in `configs/models.yaml`.
 Official AlphaFold2 is installed as backend ID `af2` in the separate `af2` environment. The runner `runners/run_af2.sh` calls `scripts/run_af2_split_pipeline.py`, imports DeepMind AlphaFold from `models/alphafold`, uses `/data/chen/protein_folding_databases/alphafold`, and records split-stage metadata for `msa_features` and `inference` in `af2_stage_metadata.csv`.
 
 The first-five run under `results/af2_first5_split_carbon/` produced 5/5 successful `rank_001.pdb` predictions and scored successfully with mean lDDT-C-alpha `0.8754336456168662`, mean TM-score-ref `0.852168`, and mean C-alpha RMSD `4.02535248453391`. Mean total runtime was `1854.0478058` seconds per target, with mean total CO2e `49.61637650354013` g per target.
+
+## 2026-05-26 Consolidated Results Update
+
+The latest first-five all-model result collection is consolidated in
+`results/consolidated/` and exported to the Carbon4Science site repo. It reports
+five scored targets for each of `esmfold`, `omegafold`, `boltz2`, `chai1`,
+`colabfold`, `openfold`, `protenix`, `openfold3`, and `af2`. The metadata table
+records MSA usage, MSA storage locations, split AF2 MSA/features versus
+inference timing, carbon settings, hardware, runner, environment, and source
+result directory.

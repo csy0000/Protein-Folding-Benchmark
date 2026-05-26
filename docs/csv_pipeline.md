@@ -114,3 +114,28 @@ For the full CASP table, fetch references before preparing targets:
 python scripts/fetch_reference_pdbs.py --input-csv CASP_csv/casp15_casp16_prepare_targets_input.csv --references-dir data/references
 python prepare_targets_from_csv.py --input-csv CASP_csv/casp15_casp16_prepare_targets_input.csv --output-targets data/targets/targets.csv --references-dir data/references --sequences-dir data/sequences --overwrite
 ```
+
+## CASP15 Under-1000-Residue Filter
+
+Use `scripts/filter_targets.py` to make a raw filtered CASP target list before
+preparing benchmark targets. It preserves the input CSV shape and appends
+`casp_filter_value` and `residue_count_inferred`:
+
+```bash
+python scripts/filter_targets.py \
+  --input CASP_csv/casp15_casp16_prepare_targets_input.csv \
+  --casp CASP15 \
+  --max-residues 999 \
+  --output data/targets/targets_casp15_lt1000.csv
+```
+
+For an end-to-end future benchmark run, use the wrapper. It filters the raw CASP
+CSV, prepares benchmark targets with `scripts/prepare_targets_from_csv.py`, then
+runs and scores the selected models:
+
+```bash
+bash scripts/run_casp15_lt1000_benchmark.sh \
+  --input-csv CASP_csv/casp15_casp16_prepare_targets_input.csv \
+  --output-targets data/targets/targets_casp15_lt1000_prepared.csv \
+  --results-dir results/casp15_lt1000_YYYYMMDD
+```
