@@ -62,6 +62,14 @@ def main() -> None:
             "total_carbon_with_shared_msa_g": f"{msa_carbon + model_carbon:.12g}",
             "lddt_ca": score.get("lddt_ca", ""),
             "ca_rmsd": score.get("ca_rmsd", ""),
+            "gdt_ts": score.get("gdt_ts", ""),
+            "gdt_ts_percent": score.get("gdt_ts_percent", ""),
+            "gdt_p1": score.get("gdt_p1", ""),
+            "gdt_p2": score.get("gdt_p2", ""),
+            "gdt_p4": score.get("gdt_p4", ""),
+            "gdt_p8": score.get("gdt_p8", ""),
+            "gdt_ts_method": score.get("gdt_ts_method", ""),
+            "gdt_ts_error": score.get("gdt_ts_error", ""),
             "tmalign_tm_score_ref": score.get("tmalign_tm_score_ref", ""),
         })
 
@@ -71,7 +79,7 @@ def main() -> None:
         "target_id", "model", "msa_runtime_sec", "msa_carbon_emissions_g",
         "model_inference_time_sec", "model_carbon_emissions_g",
         "total_time_with_shared_msa_sec", "total_carbon_with_shared_msa_g",
-        "lddt_ca", "ca_rmsd", "tmalign_tm_score_ref",
+        "lddt_ca", "ca_rmsd", "gdt_ts", "gdt_ts_percent", "gdt_p1", "gdt_p2", "gdt_p4", "gdt_p8", "gdt_ts_method", "gdt_ts_error", "tmalign_tm_score_ref",
     ]
     with out.open("w", newline="") as fobj:
         writer = csv.DictWriter(fobj, fieldnames=columns)

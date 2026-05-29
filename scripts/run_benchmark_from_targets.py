@@ -338,6 +338,44 @@ def run_status_row_for_run(
     }
 
 
+def discover_gpu_devices() -> list[str]:
+    try:
+        completed = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return []
+    devices: list[str] = []
+    for line in completed.stdout.splitlines():
+        value = line.strip().split(",", 1)[0].strip()
+        if value.isdigit():
+            devices.append(value)
+    return devices
+
+
+def parse_gpu_devices(value: str) -> list[str]:
+    text = value.strip()
+    if not text:
+        return []
+    if text.lower() == "auto":
+        return discover_gpu_devices()
+    return [part.strip() for part in text.split(",") if part.strip()]
+
+
+def env_for_gpu_trial(env: dict[str, str], gpu_device: str | None) -> dict[str, str]:
+    trial_env = env.copy()
+    if gpu_device:
+        trial_env["CUDA_VISIBLE_DEVICES"] = gpu_device
+        # Inside a masked process, the selected physical GPU is always cuda:0.
+        trial_env["OPENFOLD_DEVICE"] = "cuda:0"
+        trial_env["CHAI1_DEVICE"] = "cuda:0"
+        trial_env["ESMFOLD_CPU_ONLY"] = "0"
+    return trial_env
+
+
 def run_one(
     runner: str,
     fasta: Path,
@@ -347,13 +385,17 @@ def run_one(
     env: dict[str, str],
     trial: int,
     max_trials: int,
+    gpu_device: str | None = None,
 ) -> tuple[str, str, int, float, list[str]]:
     cmd = shlex.split(runner) + [str(fasta), str(model_out), str(top_k)]
     start = time.perf_counter()
+    trial_env = env_for_gpu_trial(env, gpu_device)
     with log_file.open("a") as log:
         log.write(f"[trial {trial}/{max_trials}]\n")
+        if gpu_device:
+            log.write(f"[gpu-fallback] physical_gpu={gpu_device} exposed_as=cuda:0\n")
         log.write("$ " + " ".join(shlex.quote(part) for part in cmd) + "\n\n")
-        completed = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, text=True, check=False, env=env)
+        completed = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, text=True, check=False, env=trial_env)
         log.write(f"\n[trial {trial}/{max_trials} exit_code={completed.returncode}]\n")
     inference_time_sec = time.perf_counter() - start
     if completed.returncode == 0:
@@ -369,6 +411,7 @@ def run_with_retries(
     log_file: Path,
     env: dict[str, str],
     max_trials: int,
+    gpu_devices: list[str] | None = None,
 ) -> tuple[str, str, int, float, int, int | str, list[str]]:
     log_file.write_text("")
     total_elapsed = 0.0
@@ -376,7 +419,10 @@ def run_with_retries(
     final_error = ""
     final_return_code = 1
     final_cmd: list[str] = []
-    for trial in range(1, max_trials + 1):
+    devices = gpu_devices or []
+    total_trials = max(max_trials, len(devices)) if devices else max_trials
+    for trial in range(1, total_trials + 1):
+        gpu_device = devices[(trial - 1) % len(devices)] if devices else None
         status, error, return_code, elapsed, cmd = run_one(
             runner,
             fasta,
@@ -385,7 +431,8 @@ def run_with_retries(
             log_file,
             env,
             trial,
-            max_trials,
+            total_trials,
+            gpu_device,
         )
         total_elapsed += elapsed
         final_status = status
@@ -394,7 +441,7 @@ def run_with_retries(
         final_cmd = cmd
         if status == "success":
             return status, error, return_code, total_elapsed, trial, trial, cmd
-    return final_status, final_error, final_return_code, total_elapsed, max_trials, "", final_cmd
+    return final_status, final_error, final_return_code, total_elapsed, total_trials, "", final_cmd
 
 
 def apply_gpu_defaults(model: str, env: dict[str, str]) -> None:
@@ -488,6 +535,7 @@ def main() -> None:
     parser.add_argument("--run-metadata", default="", help="Run timing metadata CSV. Defaults to <results-dir>/run_metadata.csv.")
     parser.add_argument("--run-status", default="", help="Compact run status CSV. Defaults to data/run_status.csv.")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--resume", action="store_true", help="Keep existing metadata and skip target/model runs that already have rank_*.pdb predictions.")
     parser.add_argument("--fail-fast", action="store_true")
     parser.add_argument("--max-trials", type=int, default=5, help="Maximum run attempts per target/model before marking it failed.")
     parser.add_argument(
@@ -495,6 +543,11 @@ def main() -> None:
         type=float,
         default=5.0,
         help="Cooldown after each target/model run so exited CUDA/JAX/PyTorch processes can release GPU memory. Set 0 to disable.",
+    )
+    parser.add_argument(
+        "--gpu-devices",
+        default="",
+        help="Optional physical GPU retry list, for example '1,2' or 'auto'. Each retry masks one GPU as cuda:0.",
     )
     parser.add_argument("--mock-runner", action="store_true", help="Write mock rank_001 predictions from references to test timing plumbing.")
     parser.add_argument("--mock-sleep-sec", type=float, default=0.05)
@@ -523,6 +576,10 @@ def main() -> None:
     if args.carbon_measure_power_secs <= 0:
         raise SystemExit("--carbon-measure-power-secs must be positive")
 
+    gpu_devices = parse_gpu_devices(args.gpu_devices)
+    if args.gpu_devices and not gpu_devices:
+        print(f"WARNING: no GPU devices resolved for --gpu-devices {args.gpu_devices!r}; using current environment", file=sys.stderr)
+
     targets = load_targets(Path(args.targets))
     models = order_models(enabled_models(Path(args.config), args.models))
     logs_dir = Path(args.logs_dir)
@@ -534,9 +591,9 @@ def main() -> None:
     shared_msa_metadata_path = Path(args.shared_msa_metadata) if args.shared_msa_metadata else None
     shared_msa_root = Path(args.shared_msa_root) if args.shared_msa_root else Path("")
     shared_msa_rows = load_shared_msa_metadata(shared_msa_metadata_path) if shared_msa_metadata_path else {}
-    if not args.dry_run and run_metadata.exists():
+    if not args.dry_run and not args.resume and run_metadata.exists():
         run_metadata.unlink()
-    if not args.dry_run and run_status.exists():
+    if not args.dry_run and not args.resume and run_status.exists():
         run_status.unlink()
 
     failures = 0
@@ -548,6 +605,8 @@ def main() -> None:
             f"top_k={args.top_k}\n"
             f"max_trials={args.max_trials}\n"
             f"gpu_cleanup_sleep_sec={args.gpu_cleanup_sleep_sec:g}\n"
+            f"gpu_devices={','.join(gpu_devices)}\n"
+            f"resume={str(bool(args.resume)).lower()}\n"
             f"run_metadata={run_metadata}\n"
             f"run_status={run_status}\n"
             f"track_carbon={str(bool(args.track_carbon)).lower()}\n"
@@ -566,6 +625,11 @@ def main() -> None:
                 model_out = Path(args.predictions_dir) / target_id / model_name
                 model_out.mkdir(parents=True, exist_ok=True)
                 log_file = logs_dir / f"{datetime.now():%Y%m%d}_{target_id}_{model_name}.log"
+                if args.resume and count_ranks(model_out) > 0:
+                    message = f"[resume-skip] {target_id} {model_name}: found {count_ranks(model_out)} rank file(s) in {model_out}"
+                    print(message)
+                    aggregate.write(message + "\n")
+                    continue
                 env = os.environ.copy()
                 apply_gpu_defaults(model_name, env)
                 msa_metadata = infer_msa_metadata(model_name, model_cfg)
@@ -625,6 +689,7 @@ def main() -> None:
                         log_file,
                         env,
                         args.max_trials,
+                        gpu_devices,
                     )
                 carbon_metadata = carbon_tracker.stop()
                 runner_metadata = load_runner_metadata(model_out)

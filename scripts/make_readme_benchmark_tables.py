@@ -19,14 +19,17 @@ def f(value: str) -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
-        return 0.0
+        return float("nan")
 
 
 def mean(values: list[float]) -> float:
-    return sum(values) / len(values) if values else 0.0
+    valid = [value for value in values if value == value]
+    return sum(valid) / len(valid) if valid else float("nan")
 
 
 def fmt(value: float, digits: int = 3) -> str:
+    if value != value:
+        return ""
     return f"{value:.{digits}f}"
 
 
@@ -62,8 +65,8 @@ def default_table(summary_path: Path, metadata_path: Path) -> str:
     grouped = model_rows(read_csv(metadata_path))
     order = ["esmfold", "omegafold", "boltz2", "chai1", "colabfold", "openfold"]
     lines = [
-        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean Ca RMSD (A) | Mean inference time (s) | Mean model CO2e (g) | MSA cost included? | Notes |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---|---|",
+        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean GDT_TS | Mean Ca RMSD (A) | Mean inference time (s) | Mean model CO2e (g) | MSA cost included? | Notes |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|",
     ]
     notes = {
         "esmfold": "single-sequence language model",
@@ -78,12 +81,13 @@ def default_table(summary_path: Path, metadata_path: Path) -> str:
         rows = grouped[model]
         first = rows[0]
         lines.append(
-            "| {model} | {msa} | {succ} | {lddt} | {tm} | {rmsd} | {time} | {carbon} | {msa_cost} | {note} |".format(
+            "| {model} | {msa} | {succ} | {lddt} | {tm} | {gdt} | {rmsd} | {time} | {carbon} | {msa_cost} | {note} |".format(
                 model=model,
                 msa=msa_label(first, model),
                 succ=sr["n_targets_success"],
                 lddt=fmt(f(sr["mean_best_lddt_ca"])),
                 tm=fmt(f(sr["mean_best_tmalign_tm_score_ref"])),
+                gdt=fmt(f(sr.get("mean_best_gdt_ts", ""))),
                 rmsd=fmt(f(sr["mean_best_ca_rmsd"])),
                 time=fmt(mean([f(r["inference_time_sec"]) for r in rows]), 1),
                 carbon=fmt(mean([f(r["carbon_emissions_g"]) for r in rows]), 2),
@@ -100,8 +104,8 @@ def shared_table(summary_path: Path, cost_path: Path, order: list[str] | None = 
     if order is None:
         order = ["protenix", "openfold3"]
     lines = [
-        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean Ca RMSD (A) | Mean model time (s) | Mean model CO2e (g) | Mean total time with shared MSA (s) | Mean total CO2e with shared MSA (g) | Notes |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean GDT_TS | Mean Ca RMSD (A) | Mean model time (s) | Mean model CO2e (g) | Mean total time with shared MSA (s) | Mean total CO2e with shared MSA (g) | Notes |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     notes = {
         "colabfold": "shared A3M used directly as ColabFold input; no MMseqs search inside model runner",
@@ -113,11 +117,12 @@ def shared_table(summary_path: Path, cost_path: Path, order: list[str] | None = 
         sr = summary[model]
         rows = grouped[model]
         lines.append(
-            "| {model} | yes; shared_precomputed_msa | {succ} | {lddt} | {tm} | {rmsd} | {mtime} | {mcarbon} | {ttime} | {tcarbon} | {note} |".format(
+            "| {model} | yes; shared_precomputed_msa | {succ} | {lddt} | {tm} | {gdt} | {rmsd} | {mtime} | {mcarbon} | {ttime} | {tcarbon} | {note} |".format(
                 model=model,
                 succ=sr["n_targets_success"],
                 lddt=fmt(f(sr["mean_best_lddt_ca"])),
                 tm=fmt(f(sr["mean_best_tmalign_tm_score_ref"])),
+                gdt=fmt(f(sr.get("mean_best_gdt_ts", ""))),
                 rmsd=fmt(f(sr["mean_best_ca_rmsd"])),
                 mtime=fmt(mean([f(r["model_inference_time_sec"]) for r in rows]), 1),
                 mcarbon=fmt(mean([f(r["model_carbon_emissions_g"]) for r in rows]), 2),
@@ -133,25 +138,58 @@ def ablation_table(summary_path: Path, metadata_path: Path, order: list[str]) ->
     summary = summary_by_model(summary_path)
     grouped = model_rows(read_csv(metadata_path))
     lines = [
-        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean Ca RMSD (A) | Mean inference time (s) | Mean model CO2e (g) |",
-        "|---|---|---:|---:|---:|---:|---:|---:|",
+        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean GDT_TS | Mean Ca RMSD (A) | Mean inference time (s) | Mean model CO2e (g) |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for model in order:
         sr = summary[model]
         rows = grouped[model]
         first = rows[0]
         lines.append(
-            "| {model} | {msa} | {succ} | {lddt} | {tm} | {rmsd} | {time} | {carbon} |".format(
+            "| {model} | {msa} | {succ} | {lddt} | {tm} | {gdt} | {rmsd} | {time} | {carbon} |".format(
                 model=model,
                 msa=msa_label(first, model),
                 succ=sr["n_targets_success"],
                 lddt=fmt(f(sr["mean_best_lddt_ca"])),
                 tm=fmt(f(sr["mean_best_tmalign_tm_score_ref"])),
+                gdt=fmt(f(sr.get("mean_best_gdt_ts", ""))),
                 rmsd=fmt(f(sr["mean_best_ca_rmsd"])),
                 time=fmt(mean([f(r["inference_time_sec"]) for r in rows]), 1),
                 carbon=fmt(mean([f(r["carbon_emissions_g"]) for r in rows]), 2),
             )
         )
+    return "\n".join(lines)
+
+
+def af2_table(summary_path: Path, stage_path: Path) -> str:
+    summary = summary_by_model(summary_path)
+    stages = read_csv(stage_path)
+    sr = summary["af2"]
+    msa_rows = [row for row in stages if row.get("stage") == "msa_features"]
+    inference_rows = [row for row in stages if row.get("stage") == "inference"]
+    lines = [
+        "| Model | Mode / MSA | n_success | Mean lDDT-Ca | Mean TM-score | Mean GDT_TS | Mean Ca RMSD (A) | Mean MSA/features time (s) | Mean MSA/features CO2e (g) | Mean inference time (s) | Mean inference CO2e (g) | Mean total time (s) | Mean total CO2e (g) | Notes |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+    ]
+    msa_time = mean([f(row.get("stage_runtime_sec", "")) for row in msa_rows])
+    msa_carbon = mean([f(row.get("stage_carbon_emissions_g", "")) for row in msa_rows])
+    inf_time = mean([f(row.get("stage_runtime_sec", "")) for row in inference_rows])
+    inf_carbon = mean([f(row.get("stage_carbon_emissions_g", "")) for row in inference_rows])
+    lines.append(
+        "| af2 | yes; official_af2_database_search | {succ} | {lddt} | {tm} | {gdt} | {rmsd} | {msa_time} | {msa_carbon} | {inf_time} | {inf_carbon} | {total_time} | {total_carbon} | official DeepMind AlphaFold2 `model_1`, full AlphaFold DBs, Amber relaxation disabled, `top_k=1` |".format(
+            succ=sr["n_targets_success"],
+            lddt=fmt(f(sr["mean_best_lddt_ca"])),
+            tm=fmt(f(sr["mean_best_tmalign_tm_score_ref"])),
+            gdt=fmt(f(sr.get("mean_best_gdt_ts", ""))),
+            rmsd=fmt(f(sr["mean_best_ca_rmsd"])),
+            msa_time=fmt(msa_time, 1),
+            msa_carbon=fmt(msa_carbon, 2),
+            inf_time=fmt(inf_time, 1),
+            inf_carbon=fmt(inf_carbon, 2),
+            total_time=fmt(msa_time + inf_time, 1) if msa_time == msa_time and inf_time == inf_time else "",
+            total_carbon=fmt(msa_carbon + inf_carbon, 2) if msa_carbon == msa_carbon and inf_carbon == inf_carbon else "",
+        )
+    )
     return "\n".join(lines)
 
 
@@ -176,6 +214,13 @@ def main() -> None:
             Path("results/four_msa_models_shared_msa_first5/scores/all_targets_model_summary.csv"),
             Path("results/four_msa_models_shared_msa_first5/shared_msa_score_cost_summary.csv"),
             ["colabfold", "openfold", "protenix", "openfold3"],
+        ),
+        "",
+        "### Official AlphaFold2 split-stage first-five benchmark",
+        "",
+        af2_table(
+            Path("results/af2_first5_split_carbon/scores/all_targets_model_summary.csv"),
+            Path("results/af2_first5_split_carbon/af2_stage_metadata.csv"),
         ),
         "",
         "### ColabFold single-sequence vs MSA ablation",

@@ -93,6 +93,14 @@ SCORE_COLUMNS = [
     "reference_pdb",
     "lddt_ca",
     "ca_rmsd",
+    "gdt_ts",
+    "gdt_ts_percent",
+    "gdt_p1",
+    "gdt_p2",
+    "gdt_p4",
+    "gdt_p8",
+    "gdt_ts_method",
+    "gdt_ts_error",
     "tmalign_available",
     "tmalign_tm_score_ref",
     "tmalign_tm_score_pred",
@@ -111,6 +119,10 @@ SUMMARY_COLUMNS = [
     "mean_lddt_ca",
     "median_lddt_ca",
     "mean_ca_rmsd",
+    "mean_gdt_ts",
+    "mean_gdt_ts_percent",
+    "best_gdt_ts",
+    "best_gdt_ts_percent",
     "mean_tmalign_tm_score_ref",
     "mean_model_inference_time_sec",
     "mean_total_runtime_sec",
@@ -260,7 +272,9 @@ def load_shared_summary(source: Path) -> dict[tuple[str, str], dict[str, str]]:
 
 
 def load_shared_msa_metadata(source: Path) -> dict[str, dict[str, str]]:
-    rows = read_csv(source / "shared_msa_metadata.csv")
+    rows = read_csv(source / "msa" / "msa_metadata.csv")
+    if not rows:
+        rows = read_csv(source / "shared_msa_metadata.csv")
     return {row.get("target_id", ""): row for row in rows}
 
 
@@ -322,7 +336,8 @@ def metadata_from_run_row(
     shared_a3m = ""
     shared_file = ""
     if shared_msa:
-        shared_file = str(source / "shared_msa_metadata.csv")
+        msa_metadata_path = source / "msa" / "msa_metadata.csv"
+        shared_file = str(msa_metadata_path if msa_metadata_path.exists() else source / "shared_msa_metadata.csv")
         shared_dir = shared_msa.get("msa_dir", shared_msa.get("shared_msa_dir", ""))
         shared_a3m = shared_msa.get("a3m_file", shared_msa.get("shared_msa_a3m_file", ""))
 
@@ -415,6 +430,14 @@ def score_from_row(source: Path, score: dict[str, str], meta: dict[str, object],
         "reference_pdb": score.get("reference_pdb", target.get("reference_pdb", "")),
         "lddt_ca": score.get("lddt_ca", ""),
         "ca_rmsd": score.get("ca_rmsd", ""),
+        "gdt_ts": score.get("gdt_ts", ""),
+        "gdt_ts_percent": score.get("gdt_ts_percent", ""),
+        "gdt_p1": score.get("gdt_p1", ""),
+        "gdt_p2": score.get("gdt_p2", ""),
+        "gdt_p4": score.get("gdt_p4", ""),
+        "gdt_p8": score.get("gdt_p8", ""),
+        "gdt_ts_method": score.get("gdt_ts_method", ""),
+        "gdt_ts_error": score.get("gdt_ts_error", ""),
         "tmalign_available": score.get("tmalign_available", ""),
         "tmalign_tm_score_ref": score.get("tmalign_tm_score_ref", ""),
         "tmalign_tm_score_pred": score.get("tmalign_tm_score_pred", ""),
@@ -480,6 +503,7 @@ def add_source_manifest(manifest: list[dict[str, object]], source: Path, model: 
     files = [
         source / "run_metadata.csv",
         source / "run_status.csv",
+        source / "msa" / "msa_metadata.csv",
         source / "shared_msa_metadata.csv",
         source / "shared_msa_score_cost_summary.csv",
         source / "af2_stage_metadata.csv",
@@ -507,6 +531,24 @@ def add_cleanup_manifest(manifest: list[dict[str, object]]) -> None:
     if not results.exists():
         return
     seen = {row["path"] for row in manifest}
+    archive_root = Path("results/_archived_test_artifacts_20260526")
+    if archive_root.exists():
+        for archived in sorted(p for p in archive_root.iterdir() if p.is_dir()):
+            original = Path("results") / archived.name
+            manifest.append(
+                {
+                    "path": str(original),
+                    "kind": "result_dir",
+                    "model": "",
+                    "target_id": "",
+                    "selected_for_consolidation": "false",
+                    "source_result_dir": str(original),
+                    "cleanup_action": "archive",
+                    "cleanup_reason": f"already archived to {archived}",
+                    "safe_to_remove": "true",
+                }
+            )
+            seen.add(str(original))
     for path in sorted(p for p in results.iterdir() if p.is_dir()):
         path_text = str(path)
         if path_text in seen:
@@ -555,6 +597,8 @@ def summarize(meta_rows: list[dict[str, object]], score_rows: list[dict[str, obj
         lddt = [v for v in (as_float(row.get("lddt_ca")) for row in scores) if v is not None]
         rmsd = [v for v in (as_float(row.get("ca_rmsd")) for row in scores) if v is not None]
         tm_ref = [v for v in (as_float(row.get("tmalign_tm_score_ref")) for row in scores) if v is not None]
+        gdt = [v for v in (as_float(row.get("gdt_ts")) for row in scores) if v is not None]
+        gdt_percent = [v for v in (as_float(row.get("gdt_ts_percent")) for row in scores) if v is not None]
         model_time = [v for v in (as_float(row.get("model_inference_time_sec")) for row in metas) if v is not None]
         total_time = [v for v in (as_float(row.get("total_runtime_sec")) for row in metas) if v is not None]
         total_carbon = [v for v in (as_float(row.get("total_carbon_emissions_g")) for row in metas) if v is not None]
@@ -569,6 +613,10 @@ def summarize(meta_rows: list[dict[str, object]], score_rows: list[dict[str, obj
                 "mean_lddt_ca": fmt(mean(lddt)),
                 "median_lddt_ca": fmt(median(lddt)),
                 "mean_ca_rmsd": fmt(mean(rmsd)),
+                "mean_gdt_ts": fmt(mean(gdt)),
+                "mean_gdt_ts_percent": fmt(mean(gdt_percent)),
+                "best_gdt_ts": fmt(max(gdt) if gdt else None),
+                "best_gdt_ts_percent": fmt(max(gdt_percent) if gdt_percent else None),
                 "mean_tmalign_tm_score_ref": fmt(mean(tm_ref)),
                 "mean_model_inference_time_sec": fmt(mean(model_time)),
                 "mean_total_runtime_sec": fmt(mean(total_time)),

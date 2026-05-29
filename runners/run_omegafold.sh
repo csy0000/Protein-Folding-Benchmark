@@ -27,7 +27,15 @@ if major >= 2:
 print("OmegaFold NumPy check OK", np.__version__)
 PY
 
-omegafold "$INPUT_FASTA" "$TMP_DIR"
+OMEGAFOLD_ARGS=()
+if [ -n "${OMEGAFOLD_SUBBATCH_SIZE:-}" ]; then
+  OMEGAFOLD_ARGS+=(--subbatch_size "$OMEGAFOLD_SUBBATCH_SIZE")
+fi
+if [ -n "${OMEGAFOLD_DEVICE:-}" ]; then
+  OMEGAFOLD_ARGS+=(--device "$OMEGAFOLD_DEVICE")
+fi
+
+omegafold "$INPUT_FASTA" "$TMP_DIR" "${OMEGAFOLD_ARGS[@]}"
 
 PDB_FILE="$(find "$TMP_DIR" -name '*.pdb' | head -n 1)"
 

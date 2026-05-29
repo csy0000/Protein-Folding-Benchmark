@@ -224,7 +224,7 @@ def main() -> None:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--colabfold-env", default="colabfold")
     parser.add_argument("--threads", type=int, default=64)
-    parser.add_argument("--gpu", type=int, choices=[0, 1], default=1)
+    parser.add_argument("--gpu", type=int, default=1)
     args = parser.parse_args()
 
     if args.force and args.skip_existing:

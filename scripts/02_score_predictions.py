@@ -13,6 +13,8 @@ from Bio.PDB import PDBParser, Superimposer
 
 
 TMALIGN_BIN_CANDIDATES = ["USalign", "TMalign", "TM-align", "tmalign"]
+GDTTM_BIN_CANDIDATES = ["TMscore"]
+GDT_CUTOFFS = (1.0, 2.0, 4.0, 8.0)
 
 
 def get_ca_atoms(pdb_path: Path, chain_id: str | None):
@@ -258,6 +260,172 @@ def run_tmalign(reference_pdb: Path, prediction_pdb: Path, binary: str) -> dict[
     }
 
 
+def empty_gdt_ts_result(method: str = "unavailable", error: str = "") -> dict[str, object]:
+    return {
+        "gdt_ts": np.nan,
+        "gdt_ts_percent": np.nan,
+        "gdt_p1": np.nan,
+        "gdt_p2": np.nan,
+        "gdt_p4": np.nan,
+        "gdt_p8": np.nan,
+        "gdt_ts_method": method,
+        "gdt_ts_error": error,
+    }
+
+
+def resolve_gdt_ts_binary(gdt_ts_bin: str) -> str | None:
+    if gdt_ts_bin != "auto":
+        return gdt_ts_bin if shutil.which(gdt_ts_bin) or Path(gdt_ts_bin).exists() else None
+    for candidate in GDTTM_BIN_CANDIDATES:
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    return None
+
+
+def parse_tmscore_gdt_stdout(stdout: str) -> tuple[dict[str, object], list[str]]:
+    errors: list[str] = []
+    result = empty_gdt_ts_result("external_tmscore", "")
+    match = re.search(
+        r"GDT-TS-score\s*=\s*([0-9.+\-Ee]+)\s+%\(d<1\)\s*=\s*([0-9.+\-Ee]+)\s+%\(d<2\)\s*=\s*([0-9.+\-Ee]+)\s+%\(d<4\)\s*=\s*([0-9.+\-Ee]+)\s+%\(d<8\)\s*=\s*([0-9.+\-Ee]+)",
+        stdout,
+    )
+    if not match:
+        match = re.search(
+            r"GDT[_-]?TS(?:-score)?\s*=\s*([0-9.+\-Ee]+).*?d<1\)?\s*=\s*([0-9.+\-Ee]+).*?d<2\)?\s*=\s*([0-9.+\-Ee]+).*?d<4\)?\s*=\s*([0-9.+\-Ee]+).*?d<8\)?\s*=\s*([0-9.+\-Ee]+)",
+            stdout,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+    if not match:
+        return result | {"gdt_ts_error": "Could not parse GDT_TS from TMscore output"}, ["Could not parse GDT_TS"]
+    values = [float(match.group(i)) for i in range(1, 6)]
+    if any(value > 1.0 for value in values):
+        values = [value / 100.0 for value in values]
+    gdt_ts, p1, p2, p4, p8 = values
+    return {
+        "gdt_ts": gdt_ts,
+        "gdt_ts_percent": 100.0 * gdt_ts,
+        "gdt_p1": p1,
+        "gdt_p2": p2,
+        "gdt_p4": p4,
+        "gdt_p8": p8,
+        "gdt_ts_method": "external_tmscore",
+        "gdt_ts_error": "",
+    }, errors
+
+
+def run_tmscore_gdt(reference_pdb: Path, prediction_pdb: Path, binary: str) -> dict[str, object]:
+    completed = subprocess.run(
+        [binary, str(prediction_pdb), str(reference_pdb)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        message = completed.stderr.strip() or completed.stdout.strip() or f"TMscore exited {completed.returncode}"
+        return empty_gdt_ts_result("external_tmscore", message)
+    parsed, parse_errors = parse_tmscore_gdt_stdout(completed.stdout)
+    if parse_errors and not parsed.get("gdt_ts_error"):
+        parsed["gdt_ts_error"] = "; ".join(parse_errors)
+    return parsed
+
+
+def kabsch_transform(moving: np.ndarray, fixed: np.ndarray) -> np.ndarray:
+    moving_centroid = moving.mean(axis=0)
+    fixed_centroid = fixed.mean(axis=0)
+    moving_centered = moving - moving_centroid
+    fixed_centered = fixed - fixed_centroid
+    covariance = moving_centered.T @ fixed_centered
+    v, _, wt = np.linalg.svd(covariance)
+    correction = np.eye(3)
+    if np.linalg.det(v @ wt) < 0:
+        correction[-1, -1] = -1
+    rotation = v @ correction @ wt
+    return moving_centered @ rotation + fixed_centroid
+
+
+def iterative_gdt_fraction(ref_coords: np.ndarray, pred_coords: np.ndarray, cutoff: float) -> float:
+    active = np.ones(len(ref_coords), dtype=bool)
+    best_fraction = 0.0
+    for _ in range(20):
+        if int(active.sum()) < 3:
+            break
+        # Refit on active subset, then apply that transform to all atoms.
+        moving_centroid = pred_coords[active].mean(axis=0)
+        fixed_centroid = ref_coords[active].mean(axis=0)
+        moving_centered = pred_coords[active] - moving_centroid
+        fixed_centered = ref_coords[active] - fixed_centroid
+        covariance = moving_centered.T @ fixed_centered
+        v, _, wt = np.linalg.svd(covariance)
+        correction = np.eye(3)
+        if np.linalg.det(v @ wt) < 0:
+            correction[-1, -1] = -1
+        rotation = v @ correction @ wt
+        transformed = (pred_coords - moving_centroid) @ rotation + fixed_centroid
+        distances = np.linalg.norm(transformed - ref_coords, axis=1)
+        new_active = distances <= cutoff
+        best_fraction = max(best_fraction, float(new_active.mean()))
+        if np.array_equal(new_active, active):
+            break
+        active = new_active
+    return best_fraction
+
+
+def internal_gdt_ts_score(
+    reference_pdb: Path,
+    predicted_pdb: Path,
+    ref_chain: str | None,
+    pred_chain: str | None,
+    match_mode: str,
+) -> dict[str, object]:
+    ref_atoms, pred_atoms = matched_ca_atoms(reference_pdb, predicted_pdb, ref_chain, pred_chain, match_mode)
+    if len(ref_atoms) < 3:
+        return empty_gdt_ts_result("internal_iterative_ca", "fewer than three matched C-alpha atoms")
+    ref_coords = np.asarray([atom.coord for atom in ref_atoms], dtype=float)
+    pred_coords = np.asarray([atom.coord for atom in pred_atoms], dtype=float)
+    fractions = [iterative_gdt_fraction(ref_coords, pred_coords, cutoff) for cutoff in GDT_CUTOFFS]
+    gdt_ts = float(np.mean(fractions))
+    return {
+        "gdt_ts": gdt_ts,
+        "gdt_ts_percent": 100.0 * gdt_ts,
+        "gdt_p1": fractions[0],
+        "gdt_p2": fractions[1],
+        "gdt_p4": fractions[2],
+        "gdt_p8": fractions[3],
+        "gdt_ts_method": "internal_iterative_ca",
+        "gdt_ts_error": "",
+    }
+
+
+def gdt_ts_score(
+    reference_pdb: Path,
+    predicted_pdb: Path,
+    ref_chain: str | None,
+    pred_chain: str | None,
+    match_mode: str,
+    method: str,
+    binary: str | None,
+    requested_bin: str,
+) -> dict[str, object]:
+    external_error = ""
+    if method in {"auto", "external"}:
+        if binary:
+            external = run_tmscore_gdt(reference_pdb, predicted_pdb, binary)
+            if not str(external.get("gdt_ts_error", "")).strip():
+                return external
+            external_error = str(external.get("gdt_ts_error", ""))
+        else:
+            external_error = f"TMscore binary not found for --gdt-ts-bin {requested_bin}"
+        if method == "external":
+            return empty_gdt_ts_result("external_tmscore", external_error)
+    if method in {"auto", "internal"}:
+        internal = internal_gdt_ts_score(reference_pdb, predicted_pdb, ref_chain, pred_chain, match_mode)
+        if external_error and not str(internal.get("gdt_ts_error", "")).strip():
+            internal["gdt_ts_error"] = f"external unavailable: {external_error}; used internal fallback"
+        return internal
+    return empty_gdt_ts_result("unavailable", f"unsupported GDT_TS method: {method}")
+
+
 def enabled_models_from_config(config_path: Path) -> list[str]:
     with config_path.open() as f:
         config = yaml.safe_load(f)
@@ -291,6 +459,10 @@ def main() -> None:
     parser.add_argument("--models", default="", help="Comma-separated model IDs to score, in config order where applicable.")
     parser.add_argument("--lddt-cutoff", type=float, default=15.0)
     parser.add_argument("--disable-lddt", action="store_true")
+    parser.add_argument("--use-gdt-ts", action="store_true", default=True)
+    parser.add_argument("--no-gdt-ts", action="store_false", dest="use_gdt_ts")
+    parser.add_argument("--gdt-ts-method", choices=["auto", "external", "internal"], default="auto")
+    parser.add_argument("--gdt-ts-bin", default="auto")
     args = parser.parse_args()
 
     reference = Path(args.reference)
@@ -301,6 +473,7 @@ def main() -> None:
     tmalign_missing_error = ""
     if args.use_tmalign and resolved_tmalign_bin is None:
         tmalign_missing_error = f"TM-align/US-align binary not found for --tmalign-bin {args.tmalign_bin}"
+    resolved_gdt_ts_bin = resolve_gdt_ts_binary(args.gdt_ts_bin) if args.use_gdt_ts else None
 
     rows = []
     columns = [
@@ -323,6 +496,14 @@ def main() -> None:
         "lddt_ca_f_2p0",
         "lddt_ca_f_4p0",
         "lddt_ca_error",
+        "gdt_ts",
+        "gdt_ts_percent",
+        "gdt_p1",
+        "gdt_p2",
+        "gdt_p4",
+        "gdt_p8",
+        "gdt_ts_method",
+        "gdt_ts_error",
         "tmalign_available",
         "tmalign_bin",
         "tmalign_rmsd",
@@ -384,6 +565,7 @@ def main() -> None:
                     "prediction": pdb.name,
                     **empty_diagnostics(),
                     **(empty_lddt_result("disabled" if args.disable_lddt else str(e)) | {"lddt_ca_cutoff": args.lddt_cutoff}),
+                    **empty_gdt_ts_result("disabled" if not args.use_gdt_ts else "unavailable", "disabled" if not args.use_gdt_ts else str(e)),
                     **tmalign_result,
                     "error": str(e),
                 })
@@ -404,6 +586,23 @@ def main() -> None:
                 except Exception as e:
                     lddt_result = empty_lddt_result(str(e)) | {"lddt_ca_cutoff": args.lddt_cutoff}
 
+            if args.use_gdt_ts:
+                try:
+                    gdt_ts_result = gdt_ts_score(
+                        reference,
+                        pdb,
+                        args.ref_chain,
+                        args.pred_chain,
+                        args.match_mode,
+                        args.gdt_ts_method,
+                        resolved_gdt_ts_bin,
+                        args.gdt_ts_bin,
+                    )
+                except Exception as e:
+                    gdt_ts_result = empty_gdt_ts_result("unavailable", str(e))
+            else:
+                gdt_ts_result = empty_gdt_ts_result("disabled", "disabled")
+
             rows.append({
                 "target_id": args.target_id,
                 "model": model_dir.name,
@@ -411,6 +610,7 @@ def main() -> None:
                 **diagnostics,
                 "z_rmsd": np.nan,
                 **lddt_result,
+                **gdt_ts_result,
                 **tmalign_result,
                 "error": "",
             })

@@ -23,6 +23,12 @@ ESMFOLD_ARGS=()
 if [ "${ESMFOLD_CPU_ONLY:-1}" != "0" ]; then
   ESMFOLD_ARGS+=(--cpu-only)
 fi
+if [ -n "${ESMFOLD_CHUNK_SIZE:-}" ]; then
+  ESMFOLD_ARGS+=(--chunk-size "$ESMFOLD_CHUNK_SIZE")
+fi
+if [ "${ESMFOLD_CPU_OFFLOAD:-0}" = "1" ]; then
+  ESMFOLD_ARGS+=(--cpu-offload)
+fi
 
 # ESMFold normally gives one structure per sequence.
 python models/esmfold/scripts/fold.py \

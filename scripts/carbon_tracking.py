@@ -11,7 +11,7 @@ from typing import Any
 
 WORLD_AVERAGE_CARBON_INTENSITY_G_PER_KWH = 475.0
 WORLD_AVERAGE_INTENSITY_SOURCE = "configurable_default_world_average"
-WORLD_AVERAGE_FALLBACK_COUNTRY = "CHE"
+WORLD_AVERAGE_FALLBACK_COUNTRY = "USA"
 
 
 CARBON_METADATA_COLUMNS = [
@@ -156,7 +156,40 @@ class CarbonRunTracker:
             if emissions_kg is not None:
                 metadata["carbon_emissions_kg"] = emissions_kg
                 metadata["carbon_emissions_g"] = emissions_kg * 1000.0
+            if self.output_path.exists():
+                normalize_world_average_codecarbon_csv(self.output_path)
         return metadata
+
+
+def normalize_world_average_codecarbon_csv(path: Path) -> None:
+    """Rewrite raw CodeCarbon rows to match benchmark world-average metadata."""
+    try:
+        with path.open(newline="") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            fieldnames = reader.fieldnames or []
+    except Exception:
+        return
+    if not rows or not fieldnames:
+        return
+    for row in rows:
+        row["country_name"] = "Global"
+        row["country_iso_code"] = "WORLD"
+        row["region"] = "world"
+        energy = row.get("energy_consumed", "")
+        try:
+            energy_kwh = float(energy)
+            emissions = energy_kwh * WORLD_AVERAGE_CARBON_INTENSITY_G_PER_KWH / 1000.0
+            row["emissions"] = str(emissions)
+            duration = float(row.get("duration", ""))
+            if duration > 0:
+                row["emissions_rate"] = str(emissions / duration)
+        except (TypeError, ValueError):
+            pass
+    with path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def read_codecarbon_csv(path: Path) -> dict[str, Any]:

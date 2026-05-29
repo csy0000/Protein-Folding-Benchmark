@@ -112,6 +112,61 @@ def parse_model_list(models: str) -> list[str]:
     return [name.strip() for name in models.split(",") if name.strip()]
 
 
+def write_score_metric_definitions(scores_dir: Path) -> None:
+    rows = [
+        {
+            "metric": "lddt_ca",
+            "full_name": "Local Distance Difference Test over C-alpha atoms",
+            "scale": "0-1; higher is better",
+            "description": "Primary local-geometry ranking metric computed from matched C-alpha atoms.",
+        },
+        {
+            "metric": "gdt_ts",
+            "full_name": "Global Distance Test - Total Score",
+            "scale": "0-1; higher is better",
+            "description": "Average of fractions of aligned residues within 1, 2, 4, and 8 Angstrom distance cutoffs after superposition.",
+        },
+        {
+            "metric": "gdt_ts_percent",
+            "full_name": "Global Distance Test - Total Score percent",
+            "scale": "0-100; higher is better",
+            "description": "The same GDT_TS value expressed as a percentage.",
+        },
+        {
+            "metric": "gdt_p1/gdt_p2/gdt_p4/gdt_p8",
+            "full_name": "GDT cutoff fractions",
+            "scale": "0-1; higher is better",
+            "description": "Fractions of aligned residues within 1, 2, 4, and 8 Angstrom cutoffs used to compute GDT_TS.",
+        },
+        {
+            "metric": "tmalign_tm_score_ref",
+            "full_name": "TM-score normalized by reference length",
+            "scale": "0-1; higher is better",
+            "description": "Secondary global topology metric from USalign/TM-align normalized by reference length.",
+        },
+        {
+            "metric": "ca_rmsd",
+            "full_name": "C-alpha RMSD",
+            "scale": "Angstrom; lower is better",
+            "description": "Diagnostic C-alpha RMSD from the benchmark's configured residue matching mode.",
+        },
+    ]
+    csv_path = scores_dir / "score_metric_definitions.csv"
+    with csv_path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["metric", "full_name", "scale", "description"])
+        writer.writeheader()
+        writer.writerows(rows)
+    md_lines = [
+        "# Score Metric Definitions",
+        "",
+        "| Metric | Full name | Scale | Description |",
+        "|---|---|---|---|",
+    ]
+    for row in rows:
+        md_lines.append(f"| {row['metric']} | {row['full_name']} | {row['scale']} | {row['description']} |")
+    (scores_dir / "score_metric_definitions.md").write_text("\n".join(md_lines) + "\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score all benchmark targets and generate target/all-target summaries.")
     parser.add_argument("--targets", default="data/targets/targets.csv")
@@ -126,6 +181,10 @@ def main() -> None:
     parser.add_argument("--use-tmalign", action="store_true", default=True)
     parser.add_argument("--no-tmalign", action="store_false", dest="use_tmalign")
     parser.add_argument("--fail-fast", action="store_true")
+    parser.add_argument("--use-gdt-ts", action="store_true", default=True)
+    parser.add_argument("--no-gdt-ts", action="store_false", dest="use_gdt_ts")
+    parser.add_argument("--gdt-ts-method", choices=["auto", "external", "internal"], default="auto")
+    parser.add_argument("--gdt-ts-bin", default="auto")
     args = parser.parse_args()
 
     scores_dir = Path(args.scores_dir)
@@ -171,6 +230,11 @@ def main() -> None:
             score_cmd.extend(["--models", ",".join(requested_models)])
         if args.use_tmalign:
             score_cmd.append("--use-tmalign")
+        if args.use_gdt_ts:
+            score_cmd.append("--use-gdt-ts")
+        else:
+            score_cmd.append("--no-gdt-ts")
+        score_cmd.extend(["--gdt-ts-method", args.gdt_ts_method, "--gdt-ts-bin", args.gdt_ts_bin])
         ok, error = run_command(score_cmd)
         score_csv = scores_dir / f"{target_id}_scores.csv"
         if ok and score_csv.exists():
@@ -216,9 +280,12 @@ def main() -> None:
         if args.fail_fast:
             raise SystemExit(error)
 
+    write_score_metric_definitions(scores_dir)
+
     if failures:
         raise SystemExit(f"Scoring completed with {failures} failure(s).")
     print("Scoring completed successfully.")
+    print(f"Score metric definitions written to: {scores_dir / 'score_metric_definitions.csv'}")
 
 
 if __name__ == "__main__":

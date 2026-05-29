@@ -159,4 +159,6 @@ For intentional subset smokes, add a comma-separated `--models` list to the scor
 
 This keeps scoring aligned with the subset that was actually run and avoids warnings for other enabled backends.
 
+Long single-sequence targets can exceed default GPU memory for ESMFold or OmegaFold. The standardized runner interface is unchanged, but the runners accept optional environment knobs: `ESMFOLD_CHUNK_SIZE` and `ESMFOLD_CPU_OFFLOAD` for ESMFold, and `OMEGAFOLD_SUBBATCH_SIZE` and `OMEGAFOLD_DEVICE` for OmegaFold.
+
 All standardized `rank_*.pdb` files are scored individually in the raw score CSV. After that, `scripts/03_summarize_scores.py` aggregates the per-prediction rows into one row per model/backend and records the best prediction according to the configured ranking metrics.

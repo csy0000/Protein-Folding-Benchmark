@@ -136,7 +136,8 @@ def cif_to_pdb_chain(cif_text: str, chain_id: str) -> str:
             continue
         auth_chain = value(row, "auth_asym_id")
         label_chain = value(row, "label_asym_id")
-        if chain_id not in {auth_chain, label_chain}:
+        chain_matches = {auth_chain, label_chain, auth_chain[:1], label_chain[:1]}
+        if chain_id not in chain_matches:
             continue
         atom_name = value(row, "auth_atom_id") or value(row, "label_atom_id")
         resname = value(row, "auth_comp_id") or value(row, "label_comp_id", "UNK")
@@ -213,6 +214,9 @@ def main() -> None:
                 text = cif_to_pdb_chain(cif_text, chain_id)
             if args.filter_chain:
                 text = filter_chain_lines(text, chain_id)
+            if "ATOM" not in text:
+                cif_text = fetch_cif_text(pdb_id, args.source)
+                text = cif_to_pdb_chain(cif_text, chain_id)
             if "ATOM" not in text:
                 raise ValueError(f"downloaded file for {pdb_id} does not contain ATOM records")
             output.write_text(text)

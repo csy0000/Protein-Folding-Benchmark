@@ -53,7 +53,7 @@ Carbon tracking defaults to world-average accounting when `--track-carbon` is us
 
 Chai-1 default metadata is classified as `msa_used=false`, `msa_source=none`, and `msa_mode=native_embedding_no_msa`; the local runner does not provide external MSAs/templates.
 
-Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker.
+Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. Score CSVs also include GDT_TS (`gdt_ts` on a 0-1 scale and `gdt_ts_percent` on a 0-100 scale), using external `TMscore` when available. See `docs/scoring_metrics.md` for column definitions.
 
 For every future Codex instruction, write a dated execution log under `codex-plan/` using the `YYYYMMDD_` filename prefix.
 
@@ -77,7 +77,7 @@ OpenFold3 is installed experimentally in the separate `openfold3` environment an
 
 Official AlphaFold2 is available as backend ID `af2`, disabled by default in `configs/models.yaml`. The run in `results/af2_first5_split_carbon/` used `tmp/backend_smoke/models_af2_only.yaml`, `top_k=1`, full official AlphaFold databases at `/data/chen/protein_folding_databases/alphafold`, and split CodeCarbon tracking for `msa_features` versus `inference`.
 
-`run_status.csv` reports 5/5 successful targets. `af2_stage_metadata.csv` has two rows per target and records `msa_source=alphafold2_default`, `msa_mode=official_af2_database_search`, MSA/features runtime/carbon, and JAX inference runtime/carbon. The score summary reports mean lDDT-C-alpha `0.8754336456168662`, mean TM-score-ref `0.852168`, and mean C-alpha RMSD `4.02535248453391`.
+`run_status.csv` reports 5/5 successful targets. `af2_stage_metadata.csv` has two rows per target and records `msa_source=alphafold2_default`, `msa_mode=official_af2_database_search`, MSA/features runtime/carbon, and JAX inference runtime/carbon. The score summary reports mean lDDT-C-alpha `0.8754336456168662`, mean TM-score-ref `0.852168`, mean GDT_TS `0.23456000000000002`, and mean C-alpha RMSD `4.02535248453391`.
 
 
 ## Shared ColabFold MSA Cache Smoke (2026-05-22)

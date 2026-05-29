@@ -20,6 +20,14 @@ OUTPUT_COLUMNS = [
     "std_best_tmalign_tm_score_ref",
     "mean_best_tmalign_rmsd",
     "std_best_tmalign_rmsd",
+    "mean_best_gdt_ts",
+    "mean_best_GDT_TS",
+    "std_best_gdt_ts",
+    "std_best_GDT_TS",
+    "mean_best_gdt_ts_percent",
+    "mean_best_GDT_TS_percent",
+    "std_best_gdt_ts_percent",
+    "std_best_GDT_TS_percent",
     "mean_best_ca_rmsd",
     "std_best_ca_rmsd",
     "mean_n_success",
@@ -53,6 +61,7 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         "mean_best_lddt_ca",
         "mean_best_tmalign_tm_score_ref",
         "mean_best_tmalign_rmsd",
+        "mean_best_gdt_ts (Global Distance Test - Total Score)",
         "mean_best_ca_rmsd",
     ]
 
@@ -68,6 +77,8 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         "",
         "Secondary metric: TM-score normalized by reference length",
         "",
+        "GDT_TS: Global Distance Test - Total Score, reported on a 0-1 scale; mean_best_gdt_ts_percent is the same score on a 0-100 scale.",
+        "",
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",
     ]
@@ -79,6 +90,7 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
             row["mean_best_lddt_ca"],
             row["mean_best_tmalign_tm_score_ref"],
             row["mean_best_tmalign_rmsd"],
+            row["mean_best_gdt_ts"],
             row["mean_best_ca_rmsd"],
         ]
         lines.append("| " + " | ".join(fmt(value) for value in values) + " |")
@@ -123,6 +135,14 @@ def main() -> None:
                 "std_best_tmalign_tm_score_ref": sample_std(group["best_tmalign_tm_score_ref"]),
                 "mean_best_tmalign_rmsd": mean_value(group["best_tmalign_rmsd"]),
                 "std_best_tmalign_rmsd": sample_std(group["best_tmalign_rmsd"]),
+                "mean_best_gdt_ts": mean_value(group["best_gdt_ts"]) if "best_gdt_ts" in group else np.nan,
+                "mean_best_GDT_TS": mean_value(group["best_gdt_ts"]) if "best_gdt_ts" in group else np.nan,
+                "std_best_gdt_ts": sample_std(group["best_gdt_ts"]) if "best_gdt_ts" in group else np.nan,
+                "std_best_GDT_TS": sample_std(group["best_gdt_ts"]) if "best_gdt_ts" in group else np.nan,
+                "mean_best_gdt_ts_percent": mean_value(group["best_gdt_ts_percent"]) if "best_gdt_ts_percent" in group else np.nan,
+                "mean_best_GDT_TS_percent": mean_value(group["best_gdt_ts_percent"]) if "best_gdt_ts_percent" in group else np.nan,
+                "std_best_gdt_ts_percent": sample_std(group["best_gdt_ts_percent"]) if "best_gdt_ts_percent" in group else np.nan,
+                "std_best_GDT_TS_percent": sample_std(group["best_gdt_ts_percent"]) if "best_gdt_ts_percent" in group else np.nan,
                 "mean_best_ca_rmsd": mean_value(group["best_ca_rmsd"]),
                 "std_best_ca_rmsd": sample_std(group["best_ca_rmsd"]),
                 "mean_n_success": mean_value(group["n_success"]),
@@ -131,8 +151,8 @@ def main() -> None:
 
     summary = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
     summary = summary.sort_values(
-        ["mean_best_lddt_ca", "mean_best_tmalign_tm_score_ref", "mean_best_tmalign_rmsd", "mean_best_ca_rmsd", "model"],
-        ascending=[False, False, True, True, True],
+        ["mean_best_lddt_ca", "mean_best_tmalign_tm_score_ref", "mean_best_gdt_ts", "mean_best_tmalign_rmsd", "mean_best_ca_rmsd", "model"],
+        ascending=[False, False, False, True, True, True],
         na_position="last",
     )
 

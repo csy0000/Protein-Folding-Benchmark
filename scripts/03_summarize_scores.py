@@ -22,6 +22,10 @@ SUMMARY_COLUMNS = [
     "best_tmalign_tm_score_pred",
     "best_tmalign_rmsd",
     "best_tmalign_aligned_length",
+    "best_gdt_ts",
+    "best_GDT_TS",
+    "best_gdt_ts_percent",
+    "best_GDT_TS_percent",
     "best_ca_rmsd",
     "mean_lddt_ca",
     "std_lddt_ca",
@@ -29,6 +33,14 @@ SUMMARY_COLUMNS = [
     "std_tmalign_tm_score_ref",
     "mean_tmalign_rmsd",
     "std_tmalign_rmsd",
+    "mean_gdt_ts",
+    "mean_GDT_TS",
+    "std_gdt_ts",
+    "std_GDT_TS",
+    "mean_gdt_ts_percent",
+    "mean_GDT_TS_percent",
+    "std_gdt_ts_percent",
+    "std_GDT_TS_percent",
     "mean_ca_rmsd",
     "std_ca_rmsd",
     "mean_n_aligned_ca",
@@ -167,6 +179,10 @@ def summarize_model(
         "best_tmalign_tm_score_pred": np.nan,
         "best_tmalign_rmsd": np.nan,
         "best_tmalign_aligned_length": np.nan,
+        "best_gdt_ts": np.nan,
+        "best_GDT_TS": np.nan,
+        "best_gdt_ts_percent": np.nan,
+        "best_GDT_TS_percent": np.nan,
         "best_ca_rmsd": np.nan,
         "mean_lddt_ca": mean_value(numeric_series(success, "lddt_ca")),
         "std_lddt_ca": sample_std(numeric_series(success, "lddt_ca")),
@@ -174,6 +190,14 @@ def summarize_model(
         "std_tmalign_tm_score_ref": sample_std(numeric_series(success, "tmalign_tm_score_ref")),
         "mean_tmalign_rmsd": mean_value(numeric_series(success, "tmalign_rmsd")),
         "std_tmalign_rmsd": sample_std(numeric_series(success, "tmalign_rmsd")),
+        "mean_gdt_ts": mean_value(numeric_series(success, "gdt_ts")),
+        "mean_GDT_TS": mean_value(numeric_series(success, "gdt_ts")),
+        "std_gdt_ts": sample_std(numeric_series(success, "gdt_ts")),
+        "std_GDT_TS": sample_std(numeric_series(success, "gdt_ts")),
+        "mean_gdt_ts_percent": mean_value(numeric_series(success, "gdt_ts_percent")),
+        "mean_GDT_TS_percent": mean_value(numeric_series(success, "gdt_ts_percent")),
+        "std_gdt_ts_percent": sample_std(numeric_series(success, "gdt_ts_percent")),
+        "std_GDT_TS_percent": sample_std(numeric_series(success, "gdt_ts_percent")),
         "mean_ca_rmsd": mean_value(numeric_series(success, "ca_rmsd")),
         "std_ca_rmsd": sample_std(numeric_series(success, "ca_rmsd")),
         "mean_n_aligned_ca": mean_value(numeric_series(success, "n_aligned_ca")),
@@ -196,6 +220,10 @@ def summarize_model(
                 "best_tmalign_tm_score_pred": pd.to_numeric(best.get("tmalign_tm_score_pred", np.nan), errors="coerce"),
                 "best_tmalign_rmsd": pd.to_numeric(best.get("tmalign_rmsd", np.nan), errors="coerce"),
                 "best_tmalign_aligned_length": pd.to_numeric(best.get("tmalign_aligned_length", np.nan), errors="coerce"),
+                "best_gdt_ts": pd.to_numeric(best.get("gdt_ts", np.nan), errors="coerce"),
+                "best_GDT_TS": pd.to_numeric(best.get("gdt_ts", np.nan), errors="coerce"),
+                "best_gdt_ts_percent": pd.to_numeric(best.get("gdt_ts_percent", np.nan), errors="coerce"),
+                "best_GDT_TS_percent": pd.to_numeric(best.get("gdt_ts_percent", np.nan), errors="coerce"),
                 "best_ca_rmsd": pd.to_numeric(best.get("ca_rmsd", np.nan), errors="coerce"),
             }
         )
@@ -211,6 +239,7 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         "best_lddt_ca",
         "best_tmalign_tm_score_ref",
         "best_tmalign_rmsd",
+        "best_gdt_ts (Global Distance Test - Total Score)",
         "best_ca_rmsd",
     ]
 
@@ -226,6 +255,8 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
         "",
         "Secondary metric: TM-score normalized by reference length",
         "",
+        "GDT_TS: Global Distance Test - Total Score, reported on a 0-1 scale; gdt_ts_percent is the same score on a 0-100 scale.",
+        "",
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",
     ]
@@ -237,6 +268,7 @@ def write_markdown(summary: pd.DataFrame, output: Path) -> None:
             row["best_lddt_ca"],
             row["best_tmalign_tm_score_ref"],
             row["best_tmalign_rmsd"],
+            row["best_gdt_ts"],
             row["best_ca_rmsd"],
         ]
         lines.append("| " + " | ".join(fmt(value) for value in values) + " |")
@@ -276,8 +308,8 @@ def main() -> None:
     ]
     summary = pd.DataFrame(rows, columns=SUMMARY_COLUMNS)
     summary = summary.sort_values(
-        ["best_lddt_ca", "best_tmalign_tm_score_ref", "best_tmalign_rmsd", "best_ca_rmsd", "model"],
-        ascending=[False, False, True, True, True],
+        ["best_lddt_ca", "best_tmalign_tm_score_ref", "best_gdt_ts", "best_tmalign_rmsd", "best_ca_rmsd", "model"],
+        ascending=[False, False, False, True, True, True],
         na_position="last",
     )
     summary.to_csv(output_path, index=False)
