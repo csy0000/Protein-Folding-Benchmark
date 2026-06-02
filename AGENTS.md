@@ -58,52 +58,11 @@ Reference chain: A
 - Canonical benchmark scoring should use `--config configs/models.yaml --only-enabled-models` so stale or deprecated prediction folders are not included in score CSVs.
 - The canonical Boltz backend ID is `boltz2`; the old `boltz` ID is deprecated and should only appear as a compatibility wrapper or upstream repository/environment name.
 
-## Mandatory Codex Execution Logs
+## Optional Codex Execution Logs
 
-For every Codex instruction or task, create a corresponding execution log under:
+Do not create Codex execution logs by default. Only write a log file under `codex-plan/` when the user explicitly asks for one.
 
-```text
-codex-plan/
-```
-
-The log filename should have the execution date prepended in `YYYYMMDD_` format and be based on the instruction name or purpose, for example:
-
-```text
-codex-plan/20260514_add_1ubq_multitarget_benchmark.log
-```
-
-Each log must include:
-
-1. The date/time of execution.
-2. The instruction/task name.
-3. The initial project state observed by Codex.
-4. The commands that were run.
-5. The files created or modified.
-6. The environments activated or modified.
-7. The tests or validation commands that were run.
-8. The results of each validation step.
-9. Any errors encountered, including exact error messages or log paths.
-10. Follow-up recommendations for ChatGPT/user.
-
-Use this log to make future ChatGPT follow-up easier. Do not omit the log, even if the task is small.
-
-If the task fails partway through, still write the log and clearly mark:
-
-```text
-STATUS: FAILED
-```
-
-If the task completes successfully, mark:
-
-```text
-STATUS: COMPLETED
-```
-
-If the task partially completes, mark:
-
-```text
-STATUS: PARTIAL
-```
+When requested, use a `YYYYMMDD_` filename prefix and include the date/time, task name, project state, commands run, files created or modified, environments activated or modified, validation steps and results, errors encountered, and follow-up recommendations. Mark the result as `STATUS: COMPLETED`, `STATUS: PARTIAL`, or `STATUS: FAILED`.
 
 ## Documentation
 

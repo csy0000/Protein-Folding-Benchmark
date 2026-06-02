@@ -1,0 +1,53 @@
+domain_id,target_id,pdb_id,chain_id,residue_start,residue_end,sequence_start,sequence_end,should_use,reason,casp_round,region_confidence
+T1104-D1,T1104,7ROA,A,TBD,TBD,1,117,Yes,All-groups A1 protein target; full input sequence length matches CASP target length.,CASP15,sequence_length_from_CASP_targetlist
+T1106s1-D1,T1106s1,7QIH,A,TBD,TBD,1,122,Check,All-groups A1 subtarget. Use only after verifying that chain A is T1106s1 rather than T1106s2.,CASP15,sequence_length_from_CASP_targetlist
+T1112-D1,T1112,8ORK,A,TBD,TBD,1,460,Yes,All-groups A1 protein target; suitable as a strict monomer/domain target.,CASP15,sequence_length_from_CASP_targetlist
+T1113-D1,T1113,7UYX,A,TBD,TBD,1,193,No,CASP target is A2 homomer/CAPRI-style; not suitable for strict single-chain monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1114s3-D1,T1114s3,7UTD,A,TBD,TBD,1,535,Check,Input sequence length matches CASP subtarget T1114s3. Verify that PDB chain A corresponds to this subtarget before scoring.,CASP15,sequence_length_from_CASP_targetlist
+T1119-D1,T1119,7SQ4,A,TBD,TBD,1,153,No,"CASP target is A3; also input sequence appears shorter than CASP target length, so mapping is not reliable.",CASP15,sequence_length_from_CASP_targetlist
+T1120-D1,T1120,7QVB,A,TBD,TBD,1,235,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1121-D1,T1121,7TIL,A,TBD,TBD,1,381,No,CASP target is A2 homomer; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1122-D1,T1122,8BBT,A,TBD,TBD,1,241,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1123-D1,T1123,7UZT,A,TBD,TBD,1,266,No,CASP target is A2 homomer; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1124-D1,T1124,7UX8,A,TBD,TBD,1,384,No,CASP target is ligand/complex-associated and A2; not a clean single-chain folding target.,CASP15,sequence_length_from_CASP_targetlist
+T1125-D1,T1125,8H2N,A,TBD,TBD,1,1200,No,A1 but very large target; current input/reference mapping should be verified/truncated before any fair scoring.,CASP15,sequence_length_from_CASP_targetlist
+T1127-D1,T1127,8XBP,A,TBD,TBD,1,211,No,CASP target is ligand-associated/A2; not a strict monomer target.,CASP15,sequence_length_from_CASP_targetlist
+T1129s2-D1,T1129s2,8A8C,A,TBD,TBD,1,640,Check,All-groups A1 subtarget from heteromeric parent H1129; verify chain/domain mapping before use.,CASP15,sequence_length_from_CASP_targetlist
+T1132-D1,T1132,8ECX,A,TBD,TBD,1,102,No,CASP target is A6; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1133-D1,T1133,8DYS,A,TBD,TBD,1,585,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1134s1-D1,T1134s1,7UBZ,A,TBD,TBD,1,230,Check,"All-groups A1 subtarget from heteromeric parent H1134; input sequence length matches s1, but chain mapping should be verified.",CASP15,sequence_length_from_CASP_targetlist
+T1137s1-D1,T1137s1,8FEF,A,TBD,TBD,1,409,No,MceG/Mce1 transporter complex; membrane/complex context makes it unsuitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1145-D1,T1145,7UWW,A,TBD,TBD,1,635,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1147-D1,T1147,8EM5,A,TBD,TBD,1,103,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1151s2-D1,T1151s2,8D5V,A,TBD,TBD,1,116,Check,All-groups A1 subtarget from heteromeric parent H1151; verify chain/domain mapping before use.,CASP15,sequence_length_from_CASP_targetlist
+T1152-D1,T1152,7R1L,A,TBD,TBD,1,56,No,CASP target is ligand-associated A2 and very short; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1155-D1,T1155,8PBV,A,TBD,TBD,1,116,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1157s1-D1,T1157s1,8PKO,A,TBD,TBD,1,1029,No,Large component from heteromeric parent H1157; not suitable for strict monomer benchmark without a separate large/complex-derived subset.,CASP15,sequence_length_from_CASP_targetlist
+T1159-D1,T1159,7PZT,A,TBD,TBD,1,160,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1160-D1,T1160,8JVN,A,TBD,TBD,1,48,No,A2 synthetic/dimeric peptide-like target; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1161-D1,T1161,8JVP,A,TBD,TBD,1,48,No,A2 synthetic/dimeric peptide-like target; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1170-D1,T1170,7PBR,A,TBD,TBD,1,318,No,A6 ligand-associated RuvB target; not a strict monomer target.,CASP15,sequence_length_from_CASP_targetlist
+T1173-D1,T1173,8ON4,A,TBD,TBD,1,204,No,CASP target is A3; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1174-D1,T1174,8OND,A,TBD,TBD,1,338,No,CASP target is A3; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1176-D1,T1176,8SMQ,A,TBD,TBD,1,170,No,CASP target is A8; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1178-D1,T1178,8UFN,A,TBD,TBD,1,306,No,CASP target is A2; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1179-D1,T1179,8TN8,A,TBD,TBD,1,261,No,CASP target is A2; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1183-D1,T1183,8IFX,A,TBD,TBD,1,200,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+T1185s?-D1,T1185s?,8OUY,A,TBD,TBD,TBD,TBD,No,Input sequence does not match visible CASP T1185 subtarget lengths; do not score until exact subtarget mapping is resolved.,CASP15,sequence_length_from_input_or_unverified
+T1187-D1,T1187,8AD2,A,TBD,TBD,1,166,No,CASP target is ligand-associated A2; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1188-D1,T1188,8C6Z,A,TBD,TBD,1,630,No,Ligand-associated target; not suitable for strict monomer benchmark.,CASP15,sequence_length_from_CASP_targetlist
+T1194-D1,T1194,8OKH,A,TBD,TBD,1,168,Yes,All-groups A1 protein target; suitable after normal PDB residue-number mapping.,CASP15,sequence_length_from_CASP_targetlist
+8BWD_chainA-D1,CASP16_TBD,8BWD,A,TBD,TBD,1,164,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9CP0_chainA-D1,CASP16_TBD,9CP0,A,TBD,TBD,1,230,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9B0L_chainP-D1,CASP16_TBD,9B0L,P,TBD,TBD,1,466,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9C4O_chainA-D1,CASP16_TBD,9C4O,A,TBD,TBD,1,661,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9N8W_chainA-D1,CASP16_TBD,9N8W,A,TBD,TBD,1,392,No,Complex/assembly context; not suitable for strict monomer benchmark. Sequence_start/end are input-sequence coordinates only.,CASP16,sequence_length_from_input_or_unverified
+8QPQ_chainT-D1,CASP16_TBD,8QPQ,T,TBD,TBD,1,517,No,Complex/assembly context; not suitable for strict monomer benchmark. Sequence_start/end are input-sequence coordinates only.,CASP16,sequence_length_from_input_or_unverified
+9DXD_chainA-D1,CASP16_TBD,9DXD,A,TBD,TBD,1,535,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9FYA_chainA-D1,CASP16_TBD,9FYA,A,TBD,TBD,1,188,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9FYG_chainA-D1,CASP16_TBD,9FYG,A,TBD,TBD,1,188,No,Near-duplicate of 9FYA input sequence; keep at most one unless explicitly benchmarking variants. Mapping still unverified.,CASP16,sequence_length_from_input_or_unverified
+8QFB_chainA-D1,CASP16_TBD,8QFB,A,TBD,TBD,1,298,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9C3C_chainA-D1,CASP16_TBD,9C3C,A,TBD,TBD,1,400,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9F5M_chainB-D1,CASP16_TBD,9F5M,B,TBD,TBD,1,234,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9SFA_chainA-D1,CASP16_TBD,9SFA,A,TBD,TBD,1,339,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified
+9FJL_chainA-D1,CASP16_TBD,9FJL,A,TBD,TBD,1,168,Check,CASP16 target/domain ID and PDB residue mapping not verified here; sequence_start/end are only the input-sequence coordinates.,CASP16,sequence_length_from_input_or_unverified

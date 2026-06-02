@@ -51,6 +51,8 @@ output_dir/
 
 `top_k` is a request, not a guarantee. Single-output backends write only `rank_001.pdb`. The benchmark driver writes per-run status and timing metadata, including MSA provenance columns, to `run_metadata.csv` and `run_status.csv`.
 
+For CASP manifest runs, `metadata/prediction_manifest.csv` separates `msa_build_*`, `inference_*`, and `total_*` runtime/carbon fields. The manifest runner CodeCarbon-wraps MSA-free/default runners as inference-only stages. ColabFold defaults to local `mmseqs2_uniref_env` MSA mode in `runners/run_colabfold.sh`; its MMseqs2 search and `colabfold_batch` inference are tracked as separate CodeCarbon stages. OpenFold shared-MSA rows copy the ColabFold MSA build values for the same domain and mark `msa_reused=true`, `msa_build_included_in_runtime=false`, and `msa_build_included_in_carbon=false` so OpenFold inference is not double-counted.
+
 Scoring uses:
 
 - lDDT-C-alpha as the primary ranking metric;
@@ -160,6 +162,62 @@ The consolidated latest all-model collection is written under `results/consolida
 - `benchmark_collection_notes.md` describes source selection and caveats.
 
 Carbon4Science exports live under `/home/chen/projects/carbon4science.github.io/results/`. The clean latest export contains `benchmark-score.csv`, `benchmark-metadata.csv`, one JSON file per exported model (`esmfold.json`, `omegafold.json`, `boltz2.json`, `chai1.json`, `colabfold.json`, `openfold.json`, `protenix.json`, `openfold3.json`, `af2.json`), plus the four consolidated all-model CSVs above. Superseded smoke/test result directories are archived, not deleted, under `results/_archived_test_artifacts_20260526/`.
+
+## CASP15/CASP16 Target Manifest Generation
+
+The current CASP target manifest workflow uses a cheap CASP table prefilter before any target-detail or RCSB lookup. It keeps only rows with `Stoichiom. == A1`, `Type` equal to `All groups` or `Prot`, and a PDB ID in the official CASP target-list row. This avoids spending time on RNA, multimeric, canceled, ligand-only, or unsolved entries.
+
+Official sources:
+
+- CASP15: `https://predictioncenter.org/casp15/targetlist.cgi`
+- CASP16: `https://predictioncenter.org/casp16/targetlist.cgi?view=regular&assis_type=all&view=all&phase=&field=t.release_date&order=ASC`
+
+Run:
+
+```bash
+python scripts/build_casp_target_manifest_prefiltered.py \
+  --only-round both \
+  --out-dir data \
+  --cache-dir data/cache/casp_target_manifest
+```
+
+Outputs:
+
+- `data/casp15_target_manifest_prefiltered.csv`
+- `data/casp16_target_manifest_prefiltered.csv`
+- `data/casp15_casp16_target_manifest_prefiltered.csv`
+
+`should_use=Yes` marks strict monomer benchmark candidates with extracted sequence, high-confidence sequence-to-chain mapping, resolved PDB author residue range, and sufficient C-alpha coverage. `Check` keeps plausible but ambiguous rows for manual review, such as equivalent chain copies or incomplete reference coverage. `No` keeps prefiltered rows that still fail mapping or coverage thresholds.
+
+Chain assignment is done by aligning the CASP target sequence against every protein chain from RCSB FASTA/mmCIF data, not by assuming chain A. `sequence_start`/`sequence_end` are CASP target-sequence coordinates; `residue_start`/`residue_end` are PDB/mmCIF author residue numbers derived from `_atom_site` C-alpha records and may differ because of tags, constructs, missing residues, insertion codes, or author numbering.
+
+
+## Generate prediction result tables
+
+After predictions and optional scoring are available, generate per-model and summary tables with:
+
+```bash
+python scripts/make_prediction_tables.py \
+  --run-root results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD \
+  --manifest data/casp15_casp16_target_manifest_prefiltered.csv \
+  --prediction-metadata results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD/metadata/prediction_manifest.csv \
+  --scores results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD/scores/domain_scores.csv \
+  --out-dir results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD/tables
+```
+
+If the score CSV is not present yet, the table generator still writes prediction, runtime, failure, and QC tables while marking structure-score fields as missing. `Yes` is the strict monomer benchmark subset, `Check` is predicted but should be interpreted with caution, and `No` is predicted for completeness or stress testing rather than strict benchmark reporting.
+
+To generate a Bhattacharya-Lab/CASP15-style Markdown report with one section per
+model and columns `Target`, `GDT-TS`, `GDC-SC`, `TMscore`, `Global LDDT`, and
+`MolProbity`, run:
+
+```bash
+python scripts/make_casp15_style_table.py \
+  --scores results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD/scores/domain_scores.csv \
+  --manifest data/casp15_casp16_target_manifest_prefiltered.csv \
+  --out-md results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD/tables/casp15_style_results.md \
+  --out-csv results/casp15_casp16_manifest_all_status_rank1_YYYYMMDD/tables/casp15_style_results.csv
+```
 
 ## Environment Policy
 

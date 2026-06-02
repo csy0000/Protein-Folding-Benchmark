@@ -7,7 +7,8 @@ __pycache__/
 
 # data are heavy
 data/
-results/
+results/*/predictions
+results/*/sequences
 *.log
 results/timing_smoke/
 

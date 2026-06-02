@@ -15,14 +15,22 @@ from Bio.PDB import PDBParser, Superimposer
 TMALIGN_BIN_CANDIDATES = ["USalign", "TMalign", "TM-align", "tmalign"]
 GDTTM_BIN_CANDIDATES = ["TMscore"]
 GDT_CUTOFFS = (1.0, 2.0, 4.0, 8.0)
+AA3_TO_1 = {
+    "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
+    "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
+    "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
+    "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
+    "SEC": "U", "PYL": "O",
+}
 
 
-def get_ca_atoms(pdb_path: Path, chain_id: str | None):
+def get_ca_records(pdb_path: Path, chain_id: str | None):
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure(pdb_path.stem, str(pdb_path))
 
     atoms = []
     residue_keys = []
+    residue_letters = []
 
     for model in structure:
         for chain in model:
@@ -34,8 +42,14 @@ def get_ca_atoms(pdb_path: Path, chain_id: str | None):
                     if hetflag == " ":
                         atoms.append(residue["CA"])
                         residue_keys.append(resseq)
+                        residue_letters.append(AA3_TO_1.get(residue.resname.upper(), "X"))
         break
 
+    return residue_keys, atoms, residue_letters
+
+
+def get_ca_atoms(pdb_path: Path, chain_id: str | None):
+    residue_keys, atoms, _ = get_ca_records(pdb_path, chain_id)
     return residue_keys, atoms
 
 
@@ -50,27 +64,15 @@ def ca_diagnostics(
     pred_chain: str | None,
     match_mode: str,
 ) -> dict[str, object]:
-    ref_keys, ref_atoms = get_ca_atoms(reference_pdb, ref_chain)
-    pred_keys, pred_atoms = get_ca_atoms(predicted_pdb, pred_chain)
+    ref_keys, pred_keys, fixed, moving, missing_ref, missing_pred = matched_ca_atom_details(
+        reference_pdb,
+        predicted_pdb,
+        ref_chain,
+        pred_chain,
+        match_mode,
+    )
 
-    if match_mode == "sequential":
-        n_aligned = min(len(ref_atoms), len(pred_atoms))
-        common_keys = list(range(n_aligned))
-        missing_ref = ref_keys[n_aligned:]
-        missing_pred = pred_keys[n_aligned:]
-        fixed = ref_atoms[:n_aligned]
-        moving = pred_atoms[:n_aligned]
-    else:
-        ref_map = dict(zip(ref_keys, ref_atoms))
-        pred_map = dict(zip(pred_keys, pred_atoms))
-
-        common_keys = [k for k in ref_keys if k in pred_map]
-        missing_ref = [k for k in ref_keys if k not in pred_map]
-        missing_pred = [k for k in pred_keys if k not in ref_map]
-        fixed = [ref_map[k] for k in common_keys]
-        moving = [pred_map[k] for k in common_keys]
-
-    if len(common_keys) < 3:
+    if len(fixed) < 3:
         raise ValueError(f"Too few matched C-alpha atoms for {predicted_pdb}")
 
     sup = Superimposer()
@@ -79,7 +81,7 @@ def ca_diagnostics(
         "match_mode": match_mode,
         "n_ref_ca": len(ref_keys),
         "n_pred_ca": len(pred_keys),
-        "n_aligned_ca": len(common_keys),
+        "n_aligned_ca": len(fixed),
         "missing_ref_resseq": format_missing(missing_ref),
         "missing_pred_resseq": format_missing(missing_pred),
         "ca_rmsd": float(sup.rms),
@@ -106,17 +108,110 @@ def matched_ca_atoms(
     pred_chain: str | None,
     match_mode: str,
 ) -> tuple[list[object], list[object]]:
-    ref_keys, ref_atoms = get_ca_atoms(reference_pdb, ref_chain)
-    pred_keys, pred_atoms = get_ca_atoms(predicted_pdb, pred_chain)
+    _, _, ref_atoms, pred_atoms, _, _ = matched_ca_atom_details(
+        reference_pdb,
+        predicted_pdb,
+        ref_chain,
+        pred_chain,
+        match_mode,
+    )
+    return ref_atoms, pred_atoms
+
+
+def sequence_alignment_pairs(ref_seq: list[str], pred_seq: list[str]) -> list[tuple[int | None, int | None]]:
+    match_score = 2
+    mismatch_score = -1
+    gap_score = -2
+    n_ref = len(ref_seq)
+    n_pred = len(pred_seq)
+    score = np.zeros((n_ref + 1, n_pred + 1), dtype=float)
+    trace = np.zeros((n_ref + 1, n_pred + 1), dtype=np.int8)
+
+    for i in range(1, n_ref + 1):
+        score[i, 0] = score[i - 1, 0] + gap_score
+        trace[i, 0] = 1
+    for j in range(1, n_pred + 1):
+        score[0, j] = score[0, j - 1] + gap_score
+        trace[0, j] = 2
+
+    for i in range(1, n_ref + 1):
+        for j in range(1, n_pred + 1):
+            diagonal = score[i - 1, j - 1] + (match_score if ref_seq[i - 1] == pred_seq[j - 1] else mismatch_score)
+            up = score[i - 1, j] + gap_score
+            left = score[i, j - 1] + gap_score
+            choices = (diagonal, up, left)
+            best = int(np.argmax(choices))
+            score[i, j] = choices[best]
+            trace[i, j] = best
+
+    pairs: list[tuple[int | None, int | None]] = []
+    i = n_ref
+    j = n_pred
+    while i > 0 or j > 0:
+        direction = trace[i, j]
+        if i > 0 and j > 0 and direction == 0:
+            pairs.append((i - 1, j - 1))
+            i -= 1
+            j -= 1
+        elif i > 0 and (j == 0 or direction == 1):
+            pairs.append((i - 1, None))
+            i -= 1
+        else:
+            pairs.append((None, j - 1))
+            j -= 1
+    pairs.reverse()
+    return pairs
+
+
+def matched_ca_atom_details(
+    reference_pdb: Path,
+    predicted_pdb: Path,
+    ref_chain: str | None,
+    pred_chain: str | None,
+    match_mode: str,
+) -> tuple[list[int], list[int], list[object], list[object], list[int], list[int]]:
+    ref_keys, ref_atoms, ref_seq = get_ca_records(reference_pdb, ref_chain)
+    pred_keys, pred_atoms, pred_seq = get_ca_records(predicted_pdb, pred_chain)
 
     if match_mode == "sequential":
         n_aligned = min(len(ref_atoms), len(pred_atoms))
-        return ref_atoms[:n_aligned], pred_atoms[:n_aligned]
+        return (
+            ref_keys,
+            pred_keys,
+            ref_atoms[:n_aligned],
+            pred_atoms[:n_aligned],
+            ref_keys[n_aligned:],
+            pred_keys[n_aligned:],
+        )
+
+    if match_mode == "sequence":
+        pairs = sequence_alignment_pairs(ref_seq, pred_seq)
+        ref_indices = [i for i, j in pairs if i is not None and j is not None]
+        pred_indices = [j for i, j in pairs if i is not None and j is not None]
+        missing_ref = [ref_keys[i] for i, j in pairs if i is not None and j is None]
+        missing_pred = [pred_keys[j] for i, j in pairs if i is None and j is not None]
+        return (
+            ref_keys,
+            pred_keys,
+            [ref_atoms[i] for i in ref_indices],
+            [pred_atoms[j] for j in pred_indices],
+            missing_ref,
+            missing_pred,
+        )
 
     pred_map = dict(zip(pred_keys, pred_atoms))
     common_keys = [k for k in ref_keys if k in pred_map]
+    missing_ref = [k for k in ref_keys if k not in pred_map]
     ref_map = dict(zip(ref_keys, ref_atoms))
-    return [ref_map[k] for k in common_keys], [pred_map[k] for k in common_keys]
+    missing_pred = [k for k in pred_keys if k not in ref_map]
+    return (
+        ref_keys,
+        pred_keys,
+        [ref_map[k] for k in common_keys],
+        [pred_map[k] for k in common_keys],
+        missing_ref,
+        missing_pred,
+    )
 
 
 def lddt_ca_score(
@@ -408,6 +503,8 @@ def gdt_ts_score(
     requested_bin: str,
 ) -> dict[str, object]:
     external_error = ""
+    if match_mode == "sequence" and method == "auto":
+        return internal_gdt_ts_score(reference_pdb, predicted_pdb, ref_chain, pred_chain, match_mode)
     if method in {"auto", "external"}:
         if binary:
             external = run_tmscore_gdt(reference_pdb, predicted_pdb, binary)
@@ -450,7 +547,7 @@ def main() -> None:
     parser.add_argument("--outdir", default="data/scores")
     parser.add_argument("--ref-chain", default=None)
     parser.add_argument("--pred-chain", default=None)
-    parser.add_argument("--match-mode", choices=["sequential", "resseq"], default="sequential")
+    parser.add_argument("--match-mode", choices=["sequential", "resseq", "sequence"], default="sequential")
     parser.add_argument("--use-tmalign", action="store_true")
     parser.add_argument("--tmalign-bin", default="auto")
     parser.add_argument("--output-suffix", default="")

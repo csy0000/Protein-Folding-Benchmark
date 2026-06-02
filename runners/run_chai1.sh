@@ -18,6 +18,7 @@ CHAI_FASTA="${OUTPUT_DIR}/input_chai1.fasta"
 
 python - "$INPUT_FASTA" "$CHAI_FASTA" <<'PY'
 from pathlib import Path
+import re
 import sys
 
 src = Path(sys.argv[1])
@@ -45,7 +46,7 @@ if not records:
 
 with dst.open("w") as handle:
     for header, sequence in records:
-        safe_name = header.replace("|", "_").replace(" ", "_")
+        safe_name = re.sub(r"[^0-9A-Za-z_.-]+", "_", header).strip("_") or "sequence"
         if not safe_name.lower().startswith("protein|"):
             safe_name = f"protein|name={safe_name}"
         handle.write(f">{safe_name}\n{sequence}\n")
