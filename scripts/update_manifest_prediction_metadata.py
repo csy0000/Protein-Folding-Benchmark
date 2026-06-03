@@ -148,6 +148,12 @@ def carbon_stage_values(raw: dict[str, object]) -> dict[str, str]:
         values["stage_metadata_note"] = "; ".join(note_parts)
     return values
 
+SHARED_MSA_COPY_MODELS = {
+    "openfold": "OpenFold",
+    "boltz2": "Boltz-2",
+    "protenix": "Protenix",
+}
+
 def find_colabfold_row(rows: list[dict[str, str]], domain_id: str) -> dict[str, str]:
     for row in rows:
         if row.get("domain_id") == domain_id and row.get("model") == "colabfold":
@@ -192,7 +198,7 @@ def main() -> None:
             row["inference_runtime_sec"] = args.runtime_sec
         if not row.get("total_runtime_sec"):
             row["total_runtime_sec"] = args.runtime_sec
-        if args.model == "openfold" and colabfold_row:
+        if args.model in SHARED_MSA_COPY_MODELS and colabfold_row:
             for column in MSA_COPY_COLUMNS:
                 row[column] = colabfold_row.get(column, row.get(column, ""))
             source_a3m = colabfold_row.get("msa_a3m_file", "") or row.get("shared_msa_a3m_file", "")
@@ -202,7 +208,7 @@ def main() -> None:
             row["msa_build_included_in_runtime"] = "false"
             row["msa_build_included_in_carbon"] = "false"
             note = row.get("stage_metadata_note", "")
-            addition = "OpenFold reused the ColabFold A3M; MSA build time/carbon copied from the colabfold row."
+            addition = f"{SHARED_MSA_COPY_MODELS[args.model]} reused the ColabFold A3M; MSA build time/carbon copied from the colabfold row."
             row["stage_metadata_note"] = "; ".join(part for part in [note, addition] if part)
         if row.get("msa_build_runtime_sec") or row.get("inference_runtime_sec"):
             row["total_runtime_sec"] = sum_values(row.get("msa_build_runtime_sec", ""), row.get("inference_runtime_sec", "")) or row.get("total_runtime_sec", "")

@@ -15,7 +15,7 @@ Protenix was installed on 2026-05-22 as an experimental shared-MSA backend. It i
 - CUDA toolkit: `cuda-toolkit=12.6` installed inside the `protenix` env
 - Source checkout: `models/protenix`
 - Runtime cache/checkpoint root: `weights/protenix`
-- Default benchmark model selector: `protenix-v2`
+- Default benchmark model selector: `protenix-v2` (falls back to `protenix_base_default_v1.0.0` when no local `protenix-v2.pt` is cached)
 - Existing local checkpoint cache: `weights/protenix/checkpoint/protenix_base_default_v1.0.0.pt`
 - Additional Protenix checkpoints may be downloaded lazily by the CLI when `protenix-v2` is first requested
 

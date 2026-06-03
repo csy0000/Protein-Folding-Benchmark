@@ -30,6 +30,15 @@ export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${CONDA_PREFIX}/targets/x86_64-linux
 export PROTENIX_ROOT_DIR="${PROTENIX_ROOT_DIR:-${PWD}/weights/protenix}"
 mkdir -p "$PROTENIX_ROOT_DIR"
 
+REQUESTED_PROTENIX_MODEL_NAME="${PROTENIX_MODEL_NAME:-protenix-v2}"
+ACTUAL_PROTENIX_MODEL_NAME="$REQUESTED_PROTENIX_MODEL_NAME"
+if [[ "$REQUESTED_PROTENIX_MODEL_NAME" == "protenix-v2" && ! -f "${PROTENIX_ROOT_DIR}/checkpoint/protenix-v2.pt" ]]; then
+  if [[ -f "${PROTENIX_ROOT_DIR}/checkpoint/protenix_base_default_v1.0.0.pt" ]]; then
+    echo "Requested Protenix model $REQUESTED_PROTENIX_MODEL_NAME is not cached locally; falling back to protenix_base_default_v1.0.0." >&2
+    ACTUAL_PROTENIX_MODEL_NAME="protenix_base_default_v1.0.0"
+  fi
+fi
+
 RAW_OUTPUT="${OUTPUT_DIR}/raw_protenix"
 PROTENIX_MSA_DIR="${OUTPUT_DIR}/protenix_msa/0"
 INPUT_JSON="${OUTPUT_DIR}/query_protenix_shared_msa.json"
@@ -107,7 +116,7 @@ protenix pred \
   -p "${PROTENIX_STEP:-20}" \
   -e "${PROTENIX_SAMPLE:-1}" \
   -d "${PROTENIX_DTYPE:-bf16}" \
-  -n "${PROTENIX_MODEL_NAME:-protenix-v2}" \
+  -n "$ACTUAL_PROTENIX_MODEL_NAME" \
   --use_msa true \
   --use_template false \
   --use_default_params false \
@@ -136,7 +145,7 @@ io.set_structure(structure)
 io.save(str(pdb))
 PYPDB
 
-python - "$OUTPUT_DIR" "$INPUT_FASTA" "$PREDICTED_CIF" "$PROTENIX_ROOT_DIR" "$SHARED_MSA_A3M_FILE" "$SHARED_MSA_DIR" "${PROTENIX_MSA_DIR}/non_pairing.a3m" "${PROTENIX_MSA_DIR}/pairing.a3m" "${PROTENIX_MODEL_NAME:-protenix-v2}" <<'PYMETA'
+python - "$OUTPUT_DIR" "$INPUT_FASTA" "$PREDICTED_CIF" "$PROTENIX_ROOT_DIR" "$SHARED_MSA_A3M_FILE" "$SHARED_MSA_DIR" "${PROTENIX_MSA_DIR}/non_pairing.a3m" "${PROTENIX_MSA_DIR}/pairing.a3m" "$REQUESTED_PROTENIX_MODEL_NAME" "$ACTUAL_PROTENIX_MODEL_NAME" <<'PYMETA'
 import json
 import sys
 from pathlib import Path
@@ -144,7 +153,8 @@ from pathlib import Path
 output_dir = Path(sys.argv[1])
 metadata = {
     "model": "protenix",
-    "model_name": sys.argv[9],
+    "model_name_requested": sys.argv[9],
+    "model_name": sys.argv[10],
     "environment": "protenix",
     "input_fasta": sys.argv[2],
     "source_prediction": sys.argv[3],
