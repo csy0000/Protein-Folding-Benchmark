@@ -1,0 +1,2 @@
+target_id,pdb_id,chain_id,sequence,reference_pdb,notes
+T1104,7ROA,A,QLEDSEVEAVAKGLEEMYANGVTEDNFKNYVKNNFAQQEISSVEEELNVNISDSCVANKIKDEFFAMISISAIVKAAQKKAWKELAVTVLRFAKANGLKTNAIIVAGQLALWAVQCG,data/references/7ROA_chainA.pdb,casp_round=CASP15; domain_id=T1104; source=data/casp15_casp16_target_manifest_prefiltered.csv

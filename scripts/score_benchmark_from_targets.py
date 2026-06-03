@@ -51,7 +51,9 @@ def load_run_metadata(path: Path) -> pd.DataFrame:
     if "rank" in metadata:
         metadata["rank"] = pd.to_numeric(metadata["rank"], errors="coerce").astype("Int64")
     if "output_pdb" in metadata:
-        metadata["prediction"] = metadata["output_pdb"].astype(str).map(lambda value: Path(value).name if value else "")
+        metadata["prediction"] = metadata["output_pdb"].map(
+            lambda value: Path(str(value)).name if pd.notna(value) and str(value) else ""
+        )
     return metadata
 
 
@@ -176,7 +178,7 @@ def main() -> None:
     parser.add_argument("--scores-dir", default="data/scores")
     parser.add_argument("--results-dir", default="results")
     parser.add_argument("--run-metadata", default="", help="Run metadata CSV with inference timing. Defaults to <results-dir>/run_metadata.csv.")
-    parser.add_argument("--match-mode", choices=["sequential", "resseq"], default="sequential")
+    parser.add_argument("--match-mode", choices=["sequential", "resseq", "sequence"], default="sequential")
     parser.add_argument("--models", default="", help="Comma-separated enabled model IDs to score.")
     parser.add_argument("--use-tmalign", action="store_true", default=True)
     parser.add_argument("--no-tmalign", action="store_false", dest="use_tmalign")

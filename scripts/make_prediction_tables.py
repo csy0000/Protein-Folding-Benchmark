@@ -24,7 +24,7 @@ MODEL_INPUT_MODE = {
     "esmfold": "single-sequence / MSA-free",
     "omegafold": "single-sequence / MSA-free",
     "boltz": "MSA-free workflow",
-    "boltz2": "MSA-free workflow",
+    "boltz2": "MSA-free workflow or shared ColabFold A3M",
     "chai1": "MSA-free workflow",
     "af3": "MSA-free or internal pipeline",
     "colabfold": "MSA-based",

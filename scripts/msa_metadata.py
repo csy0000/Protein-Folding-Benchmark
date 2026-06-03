@@ -121,7 +121,7 @@ def infer_msa_metadata(model_name: str, model_cfg: dict[str, Any] | None = None)
     if model_name in {"esmfold", "omegafold"}:
         metadata = _no_msa("native_single_sequence", "Native no-MSA model")
     elif model_name == "boltz2":
-        metadata = _no_msa("model_default_no_msa", "Boltz-2 runner provides an explicit empty MSA and runs single-sequence mode")
+        metadata = _no_msa("model_default_no_msa", "Boltz-2 runner defaults to explicit single-sequence mode but can reuse a shared ColabFold/MMseqs A3M when provided by the benchmark driver")
     elif model_name == "chai1":
         metadata = _no_msa(
             "native_embedding_no_msa",

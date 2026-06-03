@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MANIFEST="${MANIFEST:-data/casp15_casp16_target_manifest_prefiltered.csv}"
-RESULTS_DIR="${RESULTS_DIR:-results/casp15_casp16_unique_lt1000_all_default_$(date +%Y%m%d_%H%M%S)}"
+MANIFEST="${MANIFEST:-data/casp15_casp16_target_manifest_prefiltered_use.csv}"
+RESULTS_DIR="${RESULTS_DIR:-results/$(date +%Y%m%d_%H%M%S)_casp15_casp16_unique_lt1000_all_default}"
 INCLUDE_STATUS="${INCLUDE_STATUS:-All}"
 MODELS="${MODELS:-boltz,boltz2,chai1,colabfold,esmfold,omegafold,openfold}" # af2,
 RESUME_EXISTING="${RESUME_EXISTING:-1}"

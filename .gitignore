@@ -9,6 +9,8 @@ __pycache__/
 data/
 results/*/predictions
 results/*/sequences
+results/*/scores
+results/shared_msa_casp15*
 *.log
 results/timing_smoke/
 

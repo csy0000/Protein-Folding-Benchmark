@@ -1,0 +1,64 @@
+target_id,pdb_id,chain_id,sequence,reference_pdb,notes
+T0272s2,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=a; should_use=Check; qc_reason=multiple equivalent chains match
+T0272s3,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=b; should_use=Check; qc_reason=multiple equivalent chains match
+T0272s4,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=d; should_use=Check; qc_reason=multiple equivalent chains match
+T0272s5,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=g; should_use=Check; qc_reason=multiple equivalent chains match
+T0272s6,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=reference coverage below threshold 0.641
+T0272s7,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=B; should_use=No; qc_reason=chain mapping below threshold identity=1.000 coverage=0.599
+T0272s8,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=V; should_use=Check; qc_reason=reference coverage below threshold 0.356; multiple equivalent chains match
+T0272s9,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=n; should_use=Check; qc_reason=reference coverage below threshold 0.735; multiple equivalent chains match
+T1104,7ROA,A,,data/references/7ROA_chainA.pdb,manifest_chain=A; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1106s1,7QIH,B,,data/references/7QIH_chainB.pdb,manifest_chain=B; should_use=No; qc_reason=chain mapping below threshold identity=1.000 coverage=0.615; multiple equivalent chains match
+T1106s2,7QIH,A,,data/references/7QIH_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1112,8ORK,AAA,,data/references/8ORK_chainAAA.pdb,manifest_chain=AAA; should_use=Check; qc_reason=multiple equivalent chains match
+T1114s1,7UTD,Q,,data/references/7UTD_chainQ.pdb,manifest_chain=Q; should_use=No; qc_reason=chain mapping below threshold identity=1.000 coverage=0.317; multiple equivalent chains match
+T1114s2,7UTD,B,,data/references/7UTD_chainB.pdb,manifest_chain=B; should_use=Check; qc_reason=multiple equivalent chains match
+T1114s3,7UTD,A,,data/references/7UTD_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1120,7QVB,B,,data/references/7QVB_chainB.pdb,manifest_chain=B; should_use=Check; qc_reason=multiple equivalent chains match
+T1122,8BBT,A,,data/references/8BBT_chainA.pdb,manifest_chain=A; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1129s2,8A8C,A,,data/references/8A8C_chainA.pdb,manifest_chain=B; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1133,8DYS,A,,data/references/8DYS_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=reference coverage below threshold 0.699
+T1134s1,7UBZ,A,,data/references/7UBZ_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1134s2,7UBZ,A,,data/references/7UBZ_chainA.pdb,manifest_chain=D; should_use=Check; qc_reason=reference coverage below threshold 0.645; multiple equivalent chains match
+T1137s1,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=A; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1137s2,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=B; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1137s3,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=C; should_use=Check; qc_reason=reference coverage below threshold 0.592
+T1137s4,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=D; should_use=Check; qc_reason=reference coverage below threshold 0.704
+T1137s5,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=E; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1137s6,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=F; should_use=Check; qc_reason=reference coverage below threshold 0.770
+T1137s7,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=G; should_use=Check; qc_reason=reference coverage below threshold 0.458; multiple equivalent chains match
+T1137s8,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=I; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1137s9,8FEF,A,,data/references/8FEF_chainA.pdb,manifest_chain=J; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1145,7UWW,A,,data/references/7UWW_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1147,8EM5,A,,data/references/8EM5_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1151s2,8D5V,A,,data/references/8D5V_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=reference coverage below threshold 0.724; multiple equivalent chains match
+T1155,8PBV,A,,data/references/8PBV_chainA.pdb,manifest_chain=A; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1157s2,8PKO,A,,data/references/8PKO_chainA.pdb,manifest_chain=B; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1159,7PZT,A,,data/references/7PZT_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1183,8IFX,A,,data/references/8IFX_chainA.pdb,manifest_chain=B; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1185s1,8OUY,A,,data/references/8OUY_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=reference coverage below threshold 0.200
+T1185s2,8OUY,A,,data/references/8OUY_chainA.pdb,manifest_chain=B; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1185s4,8OUY,A,,data/references/8OUY_chainA.pdb,manifest_chain=D; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1194,8OKH,A,,data/references/8OKH_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1212,9B0L,P,,data/references/9B0L_chainP.pdb,manifest_chain=P; should_use=Check; qc_reason=multiple equivalent chains match
+T1227s1,9N8W,A,,data/references/9N8W_chainA.pdb,manifest_chain=A; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T1266,8QFB,A,,data/references/8QFB_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=multiple equivalent chains match
+T1272s2,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=a; should_use=Check; qc_reason=multiple equivalent chains match
+T1272s3,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=b; should_use=Check; qc_reason=multiple equivalent chains match
+T1272s4,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=d; should_use=Check; qc_reason=multiple equivalent chains match
+T1272s5,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=g; should_use=Check; qc_reason=multiple equivalent chains match
+T1272s6,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=reference coverage below threshold 0.641
+T1272s7,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=B; should_use=No; qc_reason=chain mapping below threshold identity=1.000 coverage=0.599
+T1272s8,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=V; should_use=Check; qc_reason=reference coverage below threshold 0.356; multiple equivalent chains match
+T1272s9,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=n; should_use=Check; qc_reason=reference coverage below threshold 0.735; multiple equivalent chains match
+T1280,9F5M,A,,data/references/9F5M_chainA.pdb,manifest_chain=AAA; should_use=Check; qc_reason=multiple equivalent chains match
+T1299,9FJL,A,,data/references/9FJL_chainA.pdb,manifest_chain=A; should_use=Yes; qc_reason=prefiltered A1 protein target with mapped residue range
+T2272s2,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=a; should_use=Check; qc_reason=multiple equivalent chains match
+T2272s3,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=b; should_use=Check; qc_reason=multiple equivalent chains match
+T2272s4,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=d; should_use=Check; qc_reason=multiple equivalent chains match
+T2272s5,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=g; should_use=Check; qc_reason=multiple equivalent chains match
+T2272s6,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=A; should_use=Check; qc_reason=reference coverage below threshold 0.641
+T2272s7,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=B; should_use=No; qc_reason=chain mapping below threshold identity=1.000 coverage=0.599
+T2272s8,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=V; should_use=Check; qc_reason=reference coverage below threshold 0.356; multiple equivalent chains match
+T2272s9,9C3C,A,,data/references/9C3C_chainA.pdb,manifest_chain=n; should_use=Check; qc_reason=reference coverage below threshold 0.735; multiple equivalent chains match
+T2280,9F5M,A,,data/references/9F5M_chainA.pdb,manifest_chain=AAA; should_use=Check; qc_reason=multiple equivalent chains match

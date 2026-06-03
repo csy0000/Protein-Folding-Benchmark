@@ -26,6 +26,8 @@ The runner calls:
 boltz predict input_boltz.fasta --diffusion_samples TOP_K --max_parallel_samples TOP_K --output_format pdb --accelerator "$BOLTZ_ACCELERATOR" --no_kernels --override
 ```
 
+If the benchmark driver provides `SHARED_MSA_A3M_FILE`, the same runner switches to a YAML input with `protein.msa` pointing at the shared ColabFold/MMseqs2 `.a3m`, so Boltz-2 can reuse the cached MSA without regenerating it.
+
 `BOLTZ_ACCELERATOR` defaults to `cpu`. For a CUDA smoke test, run:
 
 ```bash

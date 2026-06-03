@@ -1,0 +1,8 @@
+merged_rows: 189
+models: 3
+targets: 63
+qc_counts: Check=43, No=5, Yes=15
+available_score_metrics: none
+missing_score_metrics: gdt_ts,lddt_ca,tm_score,rmsd_ca,gdc_sc,global_lddt,molprobity
+score_note: missing score file
+out_dir: results/20260601_104732_casp15_casp16_unique_lt1000_all_default_msa-free/tables

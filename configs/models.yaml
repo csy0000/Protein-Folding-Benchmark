@@ -25,6 +25,7 @@ models:
   boltz2:
     enabled: true
     runner: bash runners/run_boltz2.sh
+    use_shared_msa: true
     msa_used: false
     msa_source: none
     msa_mode: model_default_no_msa

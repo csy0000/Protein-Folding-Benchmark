@@ -1,0 +1,2 @@
+target_id,pdb_id,chain,model,status,exit_code,runtime_sec,log_file,reason
+T1104,7ROA,A,boltz2,failed,1,5.153127,results/t1104_boltz2_shared_msa_smoke1/logs/20260603_T1104_boltz2.log,exit code 1; see results/t1104_boltz2_shared_msa_smoke1/logs/20260603_T1104_boltz2.log

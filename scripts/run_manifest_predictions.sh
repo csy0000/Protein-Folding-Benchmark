@@ -69,6 +69,7 @@ runner_for_model() {
     esmfold) echo "runners/run_esmfold.sh" ;;
     omegafold) echo "runners/run_omegafold.sh" ;;
     openfold) echo "runners/run_openfold_shared_msa.sh" ;;
+    protenix) echo "runners/run_protenix_shared_msa.sh" ;;
     *) echo "" ;;
   esac
 }
@@ -196,7 +197,7 @@ while IFS=, read -r domain_id fasta_path should_use; do
     command="bash ${runner} ${fasta_path} ${output_dir} ${PREDICTION_COUNT}"
     shared_msa_a3m=""
     shared_msa_dir=""
-    if [[ "$model" == "openfold" ]]; then
+    if [[ "$model" == "openfold" || "$model" == "boltz2" || "$model" == "protenix" ]]; then
       shared_msa_a3m="$(shared_msa_a3m_for_target "$domain_id")"
       if [[ -n "$shared_msa_a3m" ]]; then
         shared_msa_dir="$(dirname "$shared_msa_a3m")"
@@ -244,12 +245,12 @@ PY
     start_time="$(date -Iseconds)"
     start_epoch="$(date +%s)"
     set +e
-    if [[ "$model" == "openfold" ]]; then
+    if [[ "$model" == "openfold" || "$model" == "boltz2" || "$model" == "protenix" ]]; then
       if [[ -z "$shared_msa_a3m" || ! -s "$shared_msa_a3m" ]]; then
         {
-          echo "OpenFold shared-MSA mode requires a ColabFold A3M for ${domain_id}."
+          echo "${model} shared-MSA mode requires a ColabFold A3M for ${domain_id}."
           echo "Expected an existing .a3m under ${OUT_ROOT}/predictions/${domain_id}/colabfold."
-          echo "Run colabfold for this target before openfold, or remove openfold from --models."
+          echo "Run colabfold for this target before ${model}, or remove ${model} from --models."
         } >"$log_file"
         rc=1
       else

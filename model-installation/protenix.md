@@ -15,7 +15,9 @@ Protenix was installed on 2026-05-22 as an experimental shared-MSA backend. It i
 - CUDA toolkit: `cuda-toolkit=12.6` installed inside the `protenix` env
 - Source checkout: `models/protenix`
 - Runtime cache/checkpoint root: `weights/protenix`
-- Downloaded checkpoint: `weights/protenix/checkpoint/protenix_base_default_v1.0.0.pt`
+- Default benchmark model selector: `protenix-v2`
+- Existing local checkpoint cache: `weights/protenix/checkpoint/protenix_base_default_v1.0.0.pt`
+- Additional Protenix checkpoints may be downloaded lazily by the CLI when `protenix-v2` is first requested
 
 The environment needs CUDA variables exported before CLI use:
 
@@ -46,7 +48,7 @@ It preserves the standard runner interface:
 bash runners/run_protenix_shared_msa.sh input.fasta output_dir top_k
 ```
 
-The runner currently supports `top_k=1`. It expects `SHARED_MSA_DIR` and `SHARED_MSA_A3M_FILE` from the benchmark driver, converts the shared ColabFold A3M into Protenix-compatible `non_pairing.a3m` and query-only `pairing.a3m`, runs `protenix pred` with one sample, converts the first CIF prediction to `rank_001.pdb`, and writes `metadata.json`.
+The runner currently supports `top_k=1`. It expects `SHARED_MSA_DIR` and `SHARED_MSA_A3M_FILE` from the benchmark driver, converts the shared ColabFold A3M into Protenix-compatible `non_pairing.a3m` and query-only `pairing.a3m`, runs `protenix pred` with one sample, defaulting to `PROTENIX_MODEL_NAME=protenix-v2`, converts the first CIF prediction to `rank_001.pdb`, and writes `metadata.json`.
 
 ## 2026-05-22 Shared-MSA Results
 

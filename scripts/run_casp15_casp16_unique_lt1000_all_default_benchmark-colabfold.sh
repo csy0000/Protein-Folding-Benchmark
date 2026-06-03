@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MANIFEST="${MANIFEST:-data/casp15_casp16_target_manifest_prefiltered.csv}"
+MANIFEST="${MANIFEST:-data/casp15_casp16_target_manifest_prefiltered_use.csv}"
 RESULTS_DIR="${RESULTS_DIR:-results/$(date +%Y%m%d_%H%M%S)_casp15_casp16_unique_lt1000_all_default_colabfold}"
 INCLUDE_STATUS="${INCLUDE_STATUS:-All}"
 MODELS="${MODELS:-colabfold,boltz2,openfold,protenix}" # af2,

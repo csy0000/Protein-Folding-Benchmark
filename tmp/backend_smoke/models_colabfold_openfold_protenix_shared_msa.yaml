@@ -1,0 +1,37 @@
+models:
+  colabfold:
+    enabled: true
+    runner: env CUDA_VISIBLE_DEVICES=0 bash runners/run_colabfold_shared_msa.sh
+    use_shared_msa: true
+    msa_used: true
+    msa_source: colabfold_mmseqs2
+    msa_mode: shared_precomputed_msa
+    msa_database: colabfold
+    msa_database_path: /data/chen/protein_folding_databases/colabfold
+    msa_generation_included_in_timing: false
+    msa_generation_included_in_carbon: false
+    msa_reused: true
+  openfold:
+    enabled: true
+    runner: env CUDA_VISIBLE_DEVICES=0 OPENFOLD_DEVICE=cuda:0 bash runners/run_openfold_shared_msa.sh
+    use_shared_msa: true
+    msa_used: true
+    msa_source: colabfold_mmseqs2
+    msa_mode: shared_precomputed_msa
+    msa_database: colabfold
+    msa_database_path: /data/chen/protein_folding_databases/colabfold
+    msa_generation_included_in_timing: false
+    msa_generation_included_in_carbon: false
+    msa_reused: true
+  protenix:
+    enabled: true
+    runner: env CUDA_VISIBLE_DEVICES=0 bash runners/run_protenix_shared_msa.sh
+    use_shared_msa: true
+    msa_used: true
+    msa_source: colabfold_mmseqs2
+    msa_mode: shared_precomputed_msa
+    msa_database: colabfold
+    msa_database_path: /data/chen/protein_folding_databases/colabfold
+    msa_generation_included_in_timing: false
+    msa_generation_included_in_carbon: false
+    msa_reused: true

@@ -107,7 +107,7 @@ protenix pred \
   -p "${PROTENIX_STEP:-20}" \
   -e "${PROTENIX_SAMPLE:-1}" \
   -d "${PROTENIX_DTYPE:-bf16}" \
-  -n "${PROTENIX_MODEL_NAME:-protenix_base_default_v1.0.0}" \
+  -n "${PROTENIX_MODEL_NAME:-protenix-v2}" \
   --use_msa true \
   --use_template false \
   --use_default_params false \
@@ -136,7 +136,7 @@ io.set_structure(structure)
 io.save(str(pdb))
 PYPDB
 
-python - "$OUTPUT_DIR" "$INPUT_FASTA" "$PREDICTED_CIF" "$PROTENIX_ROOT_DIR" "$SHARED_MSA_A3M_FILE" "$SHARED_MSA_DIR" "${PROTENIX_MSA_DIR}/non_pairing.a3m" "${PROTENIX_MSA_DIR}/pairing.a3m" <<'PYMETA'
+python - "$OUTPUT_DIR" "$INPUT_FASTA" "$PREDICTED_CIF" "$PROTENIX_ROOT_DIR" "$SHARED_MSA_A3M_FILE" "$SHARED_MSA_DIR" "${PROTENIX_MSA_DIR}/non_pairing.a3m" "${PROTENIX_MSA_DIR}/pairing.a3m" "${PROTENIX_MODEL_NAME:-protenix-v2}" <<'PYMETA'
 import json
 import sys
 from pathlib import Path
@@ -144,6 +144,7 @@ from pathlib import Path
 output_dir = Path(sys.argv[1])
 metadata = {
     "model": "protenix",
+    "model_name": sys.argv[9],
     "environment": "protenix",
     "input_fasta": sys.argv[2],
     "source_prediction": sys.argv[3],
