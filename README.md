@@ -51,7 +51,7 @@ output_dir/
 
 `top_k` is a request, not a guarantee. Single-output backends write only `rank_001.pdb`. The benchmark driver writes per-run status and timing metadata, including MSA provenance columns, to `run_metadata.csv` and `run_status.csv`.
 
-For CASP manifest runs, `metadata/prediction_manifest.csv` separates `msa_build_*`, `inference_*`, and `total_*` runtime/carbon fields. The manifest runner CodeCarbon-wraps MSA-free/default runners as inference-only stages. ColabFold defaults to local `mmseqs2_uniref_env` MSA mode in `runners/run_colabfold.sh`; its MMseqs2 search and `colabfold_batch` inference are tracked as separate CodeCarbon stages. OpenFold shared-MSA rows copy the ColabFold MSA build values for the same domain and mark `msa_reused=true`, `msa_build_included_in_runtime=false`, and `msa_build_included_in_carbon=false` so OpenFold inference is not double-counted.
+For CASP manifest runs, `metadata/prediction_manifest.csv` separates `msa_build_*`, `inference_*`, and `total_*` runtime/carbon fields. The manifest runner CodeCarbon-wraps MSA-free/default runners as inference-only stages. ColabFold defaults to local `mmseqs2_uniref_env` MSA mode in `runners/run_colabfold.sh`; its MMseqs2 search and `colabfold_batch` inference are tracked as separate CodeCarbon stages. Official AF2 runs through `runners/run_af2.sh` write `msa_feature_*` and `af2_inference_*` stage metadata, which the manifest updater also maps into the canonical `msa_build_*` and `inference_*` columns. OpenFold shared-MSA rows copy the ColabFold MSA build values for the same domain and mark `msa_reused=true`, `msa_build_included_in_runtime=false`, and `msa_build_included_in_carbon=false` so OpenFold inference is not double-counted.
 
 Scoring uses:
 

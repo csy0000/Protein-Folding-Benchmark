@@ -29,6 +29,17 @@ STAGE_COLUMNS = [
     "shared_msa_a3m_file",
     "shared_msa_dir",
     "stage_metadata_note",
+    "msa_feature_runtime_sec",
+    "msa_feature_carbon_emissions_g",
+    "msa_feature_energy_consumed_kwh",
+    "af2_inference_runtime_sec",
+    "af2_inference_carbon_emissions_g",
+    "af2_inference_energy_consumed_kwh",
+    "af2_db_preset",
+    "af2_model_preset",
+    "af2_params_dir",
+    "af2_data_dir",
+    "af2_features_dir",
 ]
 
 MSA_COPY_COLUMNS = [
@@ -47,6 +58,14 @@ MSA_COPY_COLUMNS = [
 
 KEY_ALIASES = {
     "msa_generation_time_sec": "msa_build_runtime_sec",
+    "msa_generation_included_in_timing": "msa_build_included_in_runtime",
+    "msa_generation_included_in_carbon": "msa_build_included_in_carbon",
+    "msa_feature_runtime_sec": "msa_build_runtime_sec",
+    "msa_feature_carbon_emissions_g": "msa_build_carbon_emissions_g",
+    "msa_feature_energy_consumed_kwh": "msa_build_energy_consumed_kwh",
+    "af2_inference_runtime_sec": "inference_runtime_sec",
+    "af2_inference_carbon_emissions_g": "inference_carbon_emissions_g",
+    "af2_inference_energy_consumed_kwh": "inference_energy_consumed_kwh",
     "shared_msa_a3m_file": "shared_msa_a3m_file",
     "local_msa_a3m_file": "msa_a3m_file",
 }
@@ -102,9 +121,12 @@ def stringify(value: object) -> str:
 def metadata_values(raw: dict[str, object]) -> dict[str, str]:
     values: dict[str, str] = {}
     for key, value in raw.items():
-        target = KEY_ALIASES.get(key, key)
+        text = stringify(value)
+        if key in STAGE_COLUMNS:
+            values[key] = text
+        target = KEY_ALIASES.get(key)
         if target in STAGE_COLUMNS:
-            values[target] = stringify(value)
+            values[target] = text
     return values
 
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MANIFEST="${MANIFEST:-data/casp15_casp16_target_manifest_prefiltered_use.csv}"
-RESULTS_DIR="${RESULTS_DIR:-results/$(date +%Y%m%d_%H%M%S)_casp15_casp16_unique_lt1000_all_default}"
+RESULTS_DIR="${RESULTS_DIR:-results/$(date +%Y%m%d_%H%M%S)_casp15_casp16_unique_lt1000_all_default-af2}"
 INCLUDE_STATUS="${INCLUDE_STATUS:-All}"
 MODELS="${MODELS:-af2}" # boltz,boltz2,chai1,colabfold,esmfold,omegafold,openfold,
 RESUME_EXISTING="${RESUME_EXISTING:-1}"
