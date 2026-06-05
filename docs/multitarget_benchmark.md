@@ -53,6 +53,16 @@ Carbon tracking defaults to world-average accounting when `--track-carbon` is us
 
 CASP manifest prediction runs write split stage columns in `metadata/prediction_manifest.csv`: `msa_build_runtime_sec`/`msa_build_carbon_emissions_g`, `inference_runtime_sec`/`inference_carbon_emissions_g`, and total fields. The manifest runner CodeCarbon-wraps MSA-free/default runners as inference-only stages. ColabFold defaults to local `mmseqs2_uniref_env` MSA mode and records MMseqs2 search versus `colabfold_batch` inference as separate CodeCarbon stages. Official AF2 metadata preserves `msa_feature_*` and `af2_inference_*` fields while also populating the canonical manifest `msa_build_*` and `inference_*` columns. In the shared-MSA path, OpenFold inherits the ColabFold MSA build values for the same target and marks the MSA as reused so only OpenFold inference is attributed to the OpenFold runner itself.
 
+For long official AF2 manifest runs, `scripts/watch_af2_benchmark_resume.sh` can supervise a result directory and resume if the AF2 wrapper exits while targets remain pending:
+
+```bash
+bash scripts/watch_af2_benchmark_resume.sh \
+  --results-dir results/20260604_134750_casp15_casp16_unique_lt1000_all_default-af2 \
+  --interval-sec 1800
+```
+
+The watchdog reads `metadata/prediction_manifest.csv`, checks for active AF2 processes tied to the same result directory, and starts `scripts/run_casp15_casp16_unique_lt1000_all_default_benchmark-af2.sh --resume` only when pending rows remain and no matching process is running.
+
 Chai-1 default metadata is classified as `msa_used=false`, `msa_source=none`, and `msa_mode=native_embedding_no_msa`; the local runner does not provide external MSAs/templates.
 
 Per-target and all-target summaries rank models by lDDT-C-alpha first, TM-score normalized by reference length second, TM-align RMSD third, and C-alpha RMSD as a diagnostic tie-breaker. Score CSVs also include GDT_TS (`gdt_ts` on a 0-1 scale and `gdt_ts_percent` on a 0-100 scale), using external `TMscore` when available. See `docs/scoring_metrics.md` for column definitions.

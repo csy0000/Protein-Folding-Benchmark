@@ -53,6 +53,14 @@ output_dir/
 
 For CASP manifest runs, `metadata/prediction_manifest.csv` separates `msa_build_*`, `inference_*`, and `total_*` runtime/carbon fields. The manifest runner CodeCarbon-wraps MSA-free/default runners as inference-only stages. ColabFold defaults to local `mmseqs2_uniref_env` MSA mode in `runners/run_colabfold.sh`; its MMseqs2 search and `colabfold_batch` inference are tracked as separate CodeCarbon stages. Official AF2 runs through `runners/run_af2.sh` write `msa_feature_*` and `af2_inference_*` stage metadata, which the manifest updater also maps into the canonical `msa_build_*` and `inference_*` columns. OpenFold shared-MSA rows copy the ColabFold MSA build values for the same domain and mark `msa_reused=true`, `msa_build_included_in_runtime=false`, and `msa_build_included_in_carbon=false` so OpenFold inference is not double-counted.
 
+Long official AF2 CASP manifest runs can be supervised with `scripts/watch_af2_benchmark_resume.sh`. The watchdog checks `metadata/prediction_manifest.csv`, detects active AF2 processes for the same result directory, and restarts the AF2 wrapper with `--resume` when pending targets remain and no matching process is running:
+
+```bash
+bash scripts/watch_af2_benchmark_resume.sh \
+  --results-dir results/20260604_134750_casp15_casp16_unique_lt1000_all_default-af2 \
+  --interval-sec 1800
+```
+
 Scoring uses:
 
 - lDDT-C-alpha as the primary ranking metric;
