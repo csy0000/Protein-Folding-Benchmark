@@ -1,4 +1,0 @@
-target_id,pdb_id,chain,model,status,exit_code,runtime_sec,log_file,reason
-T1104,7ROA,A,colabfold,success,0,107.999184,results/t1104_shared_msa_smoke1/logs/20260603_T1104_colabfold.log,
-T1104,7ROA,A,openfold,failed,1,8.592175,results/t1104_shared_msa_smoke1/logs/20260603_T1104_openfold.log,exit code 1; see results/t1104_shared_msa_smoke1/logs/20260603_T1104_openfold.log
-T1104,7ROA,A,protenix,success,0,78.671867,results/t1104_shared_msa_smoke1/logs/20260603_T1104_protenix.log,

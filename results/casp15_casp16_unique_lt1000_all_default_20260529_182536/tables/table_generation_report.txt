@@ -1,8 +1,0 @@
-merged_rows: 497
-models: 7
-targets: 71
-qc_counts: Check=45, No=6, Yes=20
-available_score_metrics: gdt_ts,lddt_ca,tm_score,rmsd_ca
-missing_score_metrics: gdc_sc,global_lddt,molprobity
-score_note: scores loaded
-out_dir: results/casp15_casp16_unique_lt1000_all_default_20260529_182536/tables
