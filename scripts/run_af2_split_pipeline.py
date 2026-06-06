@@ -109,6 +109,7 @@ def default_db_paths(data_dir: Path) -> dict[str, str]:
             data_dir / "bfd" / "bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt"
         ),
         "uniref30_database_path": str(data_dir / "uniref30" / "UniRef30_2021_03"),
+        "small_bfd_database_path": str(data_dir / "small_bfd" / "bfd-first_non_consensus_sequences.fasta"),
         "pdb70_database_path": str(data_dir / "pdb70" / "pdb70"),
         "template_mmcif_dir": str(data_dir / "pdb_mmcif" / "mmcif_files"),
         "obsolete_pdbs_path": str(data_dir / "pdb_mmcif" / "obsolete.dat"),
@@ -126,8 +127,19 @@ def require_path(path: str, label: str) -> None:
 
 def make_data_pipeline(args: argparse.Namespace) -> pipeline.DataPipeline:
     db_paths = default_db_paths(args.data_dir)
-    for label, path in db_paths.items():
-        require_path(path, label)
+    required_labels = [
+        "uniref90_database_path",
+        "mgnify_database_path",
+        "pdb70_database_path",
+        "template_mmcif_dir",
+        "obsolete_pdbs_path",
+    ]
+    if args.db_preset == "reduced_dbs":
+        required_labels.append("small_bfd_database_path")
+    else:
+        required_labels.extend(["bfd_database_path", "uniref30_database_path"])
+    for label in required_labels:
+        require_path(db_paths[label], label)
     template_searcher = hhsearch.HHSearch(
         binary_path=args.hhsearch_binary_path,
         databases=[db_paths["pdb70_database_path"]],
@@ -146,15 +158,30 @@ def make_data_pipeline(args: argparse.Namespace) -> pipeline.DataPipeline:
         hhblits_binary_path=args.hhblits_binary_path,
         uniref90_database_path=db_paths["uniref90_database_path"],
         mgnify_database_path=db_paths["mgnify_database_path"],
-        bfd_database_path=db_paths["bfd_database_path"],
-        uniref30_database_path=db_paths["uniref30_database_path"],
-        small_bfd_database_path=None,
+        bfd_database_path=None if args.db_preset == "reduced_dbs" else db_paths["bfd_database_path"],
+        uniref30_database_path=None if args.db_preset == "reduced_dbs" else db_paths["uniref30_database_path"],
+        small_bfd_database_path=db_paths["small_bfd_database_path"] if args.db_preset == "reduced_dbs" else None,
         template_searcher=template_searcher,
         template_featurizer=template_featurizer,
-        use_small_bfd=False,
-        use_precomputed_msas=args.use_precomputed_msas,
+        use_small_bfd=args.db_preset == "reduced_dbs",
+        use_precomputed_msas=args.use_precomputed_msas or args.db_preset == "full_dbs_query_only_bfd",
         msa_tools_n_cpu=args.msa_tools_n_cpu,
     )
+
+
+def write_query_only_bfd_a3m(msa_output_dir: Path, target_id: str, sequence: str) -> Path:
+    bfd_out_path = msa_output_dir / "bfd_uniref_hits.a3m"
+    safe_target_id = target_id.replace("\n", "_").replace("\r", "_")
+    bfd_out_path.write_text(f">{safe_target_id} query_only_bfd_fallback\n{sequence}\n")
+    return bfd_out_path
+
+
+def msa_mode_for_preset(db_preset: str) -> str:
+    if db_preset == "reduced_dbs":
+        return "official_af2_reduced_dbs_small_bfd"
+    if db_preset == "full_dbs_query_only_bfd":
+        return "official_af2_full_dbs_query_only_bfd_fallback"
+    return "official_af2_database_search"
 
 
 def stage_row(
@@ -248,6 +275,9 @@ def run_feature_stage(
     features_dir.mkdir(parents=True, exist_ok=True)
     msa_output_dir = features_dir / "msas"
     msa_output_dir.mkdir(parents=True, exist_ok=True)
+    if args.db_preset == "full_dbs_query_only_bfd":
+        target_id, sequence = read_fasta(fasta_path)
+        write_query_only_bfd_a3m(msa_output_dir, target_id, sequence)
     data_pipeline = make_data_pipeline(args)
     feature_dict = data_pipeline.process(input_fasta_path=str(fasta_path), msa_output_dir=str(msa_output_dir))
     with (features_dir / "features.pkl").open("wb") as f:
@@ -354,7 +384,7 @@ def write_metadata(
         "source_files": [item["pdb_path"] for item in ranked],
         "msa_used": "true",
         "msa_source": "alphafold2_default",
-        "msa_mode": "official_af2_database_search",
+        "msa_mode": msa_mode_for_preset(args.db_preset),
         "msa_database": "alphafold",
         "msa_database_path": str(args.data_dir),
         "msa_generation_included_in_timing": "true",
@@ -389,7 +419,11 @@ def main() -> None:
     parser.add_argument("--top-k", type=int, default=1)
     parser.add_argument("--data-dir", default=os.environ.get("AF2_DATA_DIR", "/data/chen/protein_folding_databases/alphafold"))
     parser.add_argument("--model-preset", default=os.environ.get("AF2_MODEL_PRESET", "monomer"), choices=["monomer", "monomer_casp14", "monomer_ptm"])
-    parser.add_argument("--db-preset", default=os.environ.get("AF2_DB_PRESET", "full_dbs"), choices=["full_dbs"])
+    parser.add_argument(
+        "--db-preset",
+        default=os.environ.get("AF2_DB_PRESET", "full_dbs"),
+        choices=["full_dbs", "reduced_dbs", "full_dbs_query_only_bfd"],
+    )
     parser.add_argument("--max-template-date", default=os.environ.get("AF2_MAX_TEMPLATE_DATE", "2026-05-26"))
     parser.add_argument("--random-seed", type=int, default=int(os.environ["AF2_RANDOM_SEED"]) if os.environ.get("AF2_RANDOM_SEED") else None)
     parser.add_argument("--pdb-id", default=os.environ.get("AF2_TARGET_PDB_ID", ""))

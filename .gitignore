@@ -12,6 +12,7 @@ results/*/sequences
 results/*/scores
 results/shared_msa_casp15*
 *.log
+results/*/references/
 results/timing_smoke/
 
 # codex files
