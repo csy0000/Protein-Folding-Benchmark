@@ -53,6 +53,8 @@ Carbon tracking defaults to world-average accounting when `--track-carbon` is us
 
 CASP manifest prediction runs write split stage columns in `metadata/prediction_manifest.csv`: `msa_build_runtime_sec`/`msa_build_carbon_emissions_g`, `inference_runtime_sec`/`inference_carbon_emissions_g`, and total fields. The manifest runner CodeCarbon-wraps MSA-free/default runners as inference-only stages. ColabFold defaults to local `mmseqs2_uniref_env` MSA mode and records MMseqs2 search versus `colabfold_batch` inference as separate CodeCarbon stages. Official AF2 metadata preserves `msa_feature_*` and `af2_inference_*` fields while also populating the canonical manifest `msa_build_*` and `inference_*` columns. In the shared-MSA path, OpenFold inherits the ColabFold MSA build values for the same target and marks the MSA as reused so only OpenFold inference is attributed to the OpenFold runner itself.
 
+Official AF2 accepts `AF2_DB_PRESET=full_dbs`, `reduced_dbs`, or `full_dbs_query_only_bfd`. `reduced_dbs` uses small-BFD when that database is installed. `full_dbs_query_only_bfd` is a documented fallback for full-db HHblits BFD/UniRef failures: it keeps the successful UniRef90/MGnify/template searches, writes a query-only `bfd_uniref_hits.a3m`, and records `msa_mode=official_af2_full_dbs_query_only_bfd_fallback` in runner metadata.
+
 For long official AF2 manifest runs, `scripts/watch_af2_benchmark_resume.sh` can supervise a result directory and resume if the AF2 wrapper exits while targets remain pending:
 
 ```bash

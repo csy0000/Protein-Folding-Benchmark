@@ -165,6 +165,61 @@ def copy_manifest_used(targets, dest_root, dest_rel):
     return len(rows)
 
 
+def patch_manifest(dest_root: Path, dest_rel: str, only_targets: set, only_models: set) -> int:
+    """In-place update of prediction_manifest.csv for specific (target, model) pairs.
+
+    Reads fresh rows from each model's source run manifest, rewrites paths, and
+    replaces only the matching rows in the existing combined manifest.  All other
+    rows are left unchanged.  Returns the number of rows replaced.
+    """
+    out_path = dest_root / "metadata" / "prediction_manifest.csv"
+    if not out_path.exists():
+        raise SystemExit(f"Combined manifest not found; run full combine first: {out_path}")
+
+    # Load the existing combined manifest preserving column order.
+    with open(out_path, newline="") as fh:
+        reader = csv.DictReader(fh)
+        fieldnames = reader.fieldnames or []
+        existing_rows = list(reader)
+
+    # Build fresh rows from each source run for the requested (target, model) pairs.
+    fresh: dict[tuple[str, str], dict] = {}
+    for run, models in RUNS.items():
+        overlap = only_models & set(models)
+        if not overlap:
+            continue
+        man = REPO_ROOT / run / "metadata" / "prediction_manifest.csv"
+        for row in csv.DictReader(open(man, newline="")):
+            tid = row.get("target_id", "")
+            mod = row.get("model", "")
+            if tid in only_targets and mod in overlap:
+                rewritten = {k: rewrite_paths(v, dest_rel) for k, v in row.items()}
+                fresh[(tid, mod)] = rewritten
+
+    # Replace matching rows in place; preserve row order.
+    replaced = 0
+    updated = []
+    for row in existing_rows:
+        key = (row.get("target_id", ""), row.get("model", ""))
+        if key in fresh:
+            # Merge: use fresh values for known cols; keep existing for extra cols.
+            merged = {k: row.get(k, "") for k in fieldnames}
+            for k, v in fresh[key].items():
+                if k in merged:
+                    merged[k] = v
+            updated.append(merged)
+            replaced += 1
+        else:
+            updated.append({k: row.get(k, "") for k in fieldnames})
+
+    with open(out_path, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=fieldnames, restval="")
+        w.writeheader()
+        w.writerows(updated)
+
+    return replaced
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument(
@@ -173,33 +228,63 @@ def main():
         help="Destination folder (relative to repo root). Default: %(default)s",
     )
     ap.add_argument("--dry-run", action="store_true", help="Report plan without copying.")
+    ap.add_argument(
+        "--only-targets",
+        default="",
+        help="Comma-separated subset of target_ids to refresh (partial update mode).",
+    )
+    ap.add_argument(
+        "--only-models",
+        default="",
+        help="Comma-separated subset of model names to refresh (partial update mode).",
+    )
     args = ap.parse_args()
 
     dest_rel = args.dest.rstrip("/")
     dest_root = REPO_ROOT / dest_rel
 
+    only_targets = {t.strip() for t in args.only_targets.split(",") if t.strip()}
+    only_models = {m.strip() for m in args.only_models.split(",") if m.strip()}
+    partial = bool(only_targets or only_models)
+
     run_dirs = list(RUNS)
-    targets = common_targets(run_dirs)
-    all_models = [m for ms in RUNS.values() for m in ms]
+    all_targets = common_targets(run_dirs)
+    all_models_list = [m for ms in RUNS.values() for m in ms]
+
+    # In partial mode, restrict to the requested subset.
+    targets = sorted(only_targets) if only_targets else all_targets
+    models_scope = only_models if only_models else set(all_models_list)
 
     print(f"Combined folder : {dest_root}")
-    print(f"Common targets  : {len(targets)}")
-    print(f"Models ({len(all_models)})     : {', '.join(all_models)}")
-    print(f"Expected rows   : {len(targets) * len(all_models)} (targets x models)")
+    if partial:
+        print(f"PARTIAL update  : targets={sorted(only_targets) or 'all'}, models={sorted(models_scope) or 'all'}")
+    else:
+        print(f"Common targets  : {len(targets)}")
+        print(f"Models ({len(all_models_list)})     : {', '.join(all_models_list)}")
+        print(f"Expected rows   : {len(targets) * len(all_models_list)} (targets x models)")
 
     if args.dry_run:
         print("\n[dry-run] no files written.")
         return
 
     dest_root.mkdir(parents=True, exist_ok=True)
-    n_pred = copy_predictions(targets, dest_root, dest_rel)
-    copy_sequences(targets, dest_root)
-    n_manifest = merge_manifest(targets, dest_root, dest_rel)
-    n_used = copy_manifest_used(targets, dest_root, dest_rel)
 
-    print(f"\nCopied prediction dirs : {n_pred}")
-    print(f"Merged manifest rows   : {n_manifest} -> {dest_rel}/metadata/prediction_manifest.csv")
-    print(f"manifest_used rows     : {n_used} -> {dest_rel}/manifest_used.csv")
+    if partial:
+        # Copy only the requested (target, model) prediction dirs.
+        n_pred = copy_predictions(targets, dest_root, dest_rel)
+        # Patch only those rows in the existing manifest.
+        n_patched = patch_manifest(dest_root, dest_rel, only_targets or set(all_targets), models_scope)
+        print(f"\nCopied prediction dirs : {n_pred}")
+        print(f"Manifest rows patched  : {n_patched} -> {dest_rel}/metadata/prediction_manifest.csv")
+    else:
+        n_pred = copy_predictions(targets, dest_root, dest_rel)
+        copy_sequences(targets, dest_root)
+        n_manifest = merge_manifest(targets, dest_root, dest_rel)
+        n_used = copy_manifest_used(targets, dest_root, dest_rel)
+        print(f"\nCopied prediction dirs : {n_pred}")
+        print(f"Merged manifest rows   : {n_manifest} -> {dest_rel}/metadata/prediction_manifest.csv")
+        print(f"manifest_used rows     : {n_used} -> {dest_rel}/manifest_used.csv")
+
     print("Done.")
 
 

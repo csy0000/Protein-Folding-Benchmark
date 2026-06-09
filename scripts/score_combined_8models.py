@@ -284,11 +284,22 @@ def main() -> None:
         action="store_true",
         help="Abort on the first scoring failure instead of continuing.",
     )
+    ap.add_argument(
+        "--only-targets",
+        default="",
+        help=(
+            "Comma-separated subset of target_ids to re-score (partial update mode). "
+            "The per-target 02/03 steps run only for these; 05 (aggregate) and all "
+            "per-model JSONs are still regenerated using existing CSVs for all targets."
+        ),
+    )
     args = ap.parse_args()
 
     run_dir = REPO_ROOT / args.run_dir
     if not run_dir.is_dir():
         raise SystemExit(f"Run dir not found: {run_dir}")
+
+    only_targets: set[str] = {t.strip() for t in args.only_targets.split(",") if t.strip()}
 
     scores_dir = run_dir / "scores"
     scores_dir.mkdir(exist_ok=True)
@@ -305,6 +316,8 @@ def main() -> None:
 
     targets = load_scoring_targets(scoring_targets_path)
     print(f"Targets: {len(targets)}")
+    if only_targets:
+        print(f"Partial scoring: only {sorted(only_targets)}")
 
     # ── 2. Load manifest for timing/carbon merge ──────────────────────────────
     manifest = load_manifest(run_dir)
@@ -318,12 +331,13 @@ def main() -> None:
 
     if not args.skip_scoring:
         # ── 3. Score per target ───────────────────────────────────────────────
-        print(f"\n── Scoring {len(targets)} targets (match-mode={args.match_mode}) ──")
-        for i, target in enumerate(targets, 1):
+        score_targets = [t for t in targets if not only_targets or t["target_id"] in only_targets]
+        print(f"\n── Scoring {len(score_targets)}/{len(targets)} targets (match-mode={args.match_mode}) ──")
+        for i, target in enumerate(score_targets, 1):
             tid = target["target_id"]
             ref = target["reference_pdb"]
             chain = target["chain_id"]
-            print(f"\n[{i:2d}/{len(targets)}] {tid}  ref={ref}  chain={chain}")
+            print(f"\n[{i:2d}/{len(score_targets)}] {tid}  ref={ref}  chain={chain}")
 
             if not Path(ref).exists():
                 print(f"  WARN: reference not found, skipping: {ref}", file=sys.stderr)

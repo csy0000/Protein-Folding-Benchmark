@@ -1,7 +1,7 @@
 {
   "model": "openfold",
   "benchmark": "casp15_casp16_unique_lt1000_combined_8models",
-  "exported_at_utc": "2026-06-06T16:40:16Z",
+  "exported_at_utc": "2026-06-06T16:55:06Z",
   "source_folder": "results/2026-06-06-combine-8models",
   "match_mode": "sequence",
   "n_targets": 45,
