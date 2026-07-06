@@ -65,10 +65,14 @@ runner_for_model() {
     boltz) echo "runners/run_boltz.sh" ;;
     boltz2) echo "runners/run_boltz2.sh" ;;
     chai1) echo "runners/run_chai1.sh" ;;
+    chai1_msa) echo "runners/run_chai1_shared_msa.sh" ;;
     colabfold) echo "runners/run_colabfold.sh" ;;
+    colabfold_nomsa) echo "runners/run_colabfold.sh" ;;
     esmfold) echo "runners/run_esmfold.sh" ;;
     omegafold) echo "runners/run_omegafold.sh" ;;
     openfold) echo "runners/run_openfold_shared_msa.sh" ;;
+    openfold_nomsa) echo "runners/run_openfold.sh" ;;
+    boltz2_nomsa) echo "runners/run_boltz2.sh" ;;
     protenix) echo "runners/run_protenix_shared_msa.sh" ;;
     *) echo "" ;;
   esac
@@ -197,7 +201,7 @@ while IFS=, read -r domain_id fasta_path should_use; do
     command="bash ${runner} ${fasta_path} ${output_dir} ${PREDICTION_COUNT}"
     shared_msa_a3m=""
     shared_msa_dir=""
-    if [[ "$model" == "openfold" || "$model" == "boltz2" || "$model" == "protenix" ]]; then
+    if [[ "$model" == "openfold" || "$model" == "boltz2" || "$model" == "protenix" || "$model" == "chai1_msa" ]]; then
       shared_msa_a3m="$(shared_msa_a3m_for_target "$domain_id")"
       if [[ -n "$shared_msa_a3m" ]]; then
         shared_msa_dir="$(dirname "$shared_msa_a3m")"
@@ -245,7 +249,7 @@ PY
     start_time="$(date -Iseconds)"
     start_epoch="$(date +%s)"
     set +e
-    if [[ "$model" == "openfold" || "$model" == "boltz2" || "$model" == "protenix" ]]; then
+    if [[ "$model" == "openfold" || "$model" == "boltz2" || "$model" == "protenix" || "$model" == "chai1_msa" ]]; then
       if [[ -z "$shared_msa_a3m" || ! -s "$shared_msa_a3m" ]]; then
         {
           echo "${model} shared-MSA mode requires a ColabFold A3M for ${domain_id}."
@@ -265,7 +269,7 @@ PY
             bash "$runner" "$fasta_path" "$output_dir" "$PREDICTION_COUNT" >"$log_file" 2>&1
         rc=$?
       fi
-    elif [[ "$model" == "colabfold" || "$model" == "af2" ]]; then
+    elif [[ "$model" == "colabfold" || "$model" == "colabfold_nomsa" || "$model" == "af2" ]]; then
       bash "$runner" "$fasta_path" "$output_dir" "$PREDICTION_COUNT" >"$log_file" 2>&1
       rc=$?
     else
