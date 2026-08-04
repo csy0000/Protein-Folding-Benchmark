@@ -27,6 +27,72 @@ All 45 targets predicted successfully for all 8 models. Results ranked by mean l
 
 Full per-target and per-model scores: `results/2026-06-06-combine-8models/scores/all_targets_model_summary.csv`.
 
+### 3-replicate GPU results (n=3, 2026-08-03)
+
+The full 8-model benchmark was run three times end to end on GPU, to put error bars on cost (runtime / energy / CO₂). It turned out to be necessary for accuracy as well — see below. All **1080/1080 predictions succeeded** (45 targets × 8 models × 3 reps).
+
+- **Replicates:** `results/2026-06-09-combine-8models-gpu` (rep1), `results/20260802_082154_combine-8models-gpu_rep2`, `results/20260803_005751_combine-8models-gpu_rep3`.
+- **Driver:** `scripts/run_two_more_reps.sh` (serial, pinned to one GPU). **Aggregator:** `scripts/06_summarize_across_reps.py` → `results/replicate_summary/`.
+- Every value below is **mean ± sample std across the three replicates**, where each replicate value is itself a mean over the 45 targets. This is a different quantity from the across-target std reported in the score CSVs.
+
+| Model | Mean lDDT-Cα | Mean TM-score | Mean GDT_TS (%) | Mean Cα-RMSD (Å) |
+|---|---:|---:|---:|---:|
+| colabfold | 0.8760 ± 0.0002 | 0.7698 ± 0.0007 | 70.87 ± 0.03 | 11.964 ± 0.023 |
+| openfold | 0.8753 ± 0.0018 | 0.7698 ± 0.0033 | 71.22 ± 0.33 | 11.695 ± 0.033 |
+| protenix | 0.8709 ± 0.0008 | 0.7444 ± 0.0006 | 69.45 ± 0.09 | 15.361 ± 0.001 |
+| af2 | 0.8673 ± 0.0034 | 0.7626 ± 0.0026 | 70.15 ± 0.12 | 11.138 ± 0.244 |
+| boltz2 | 0.8627 ± 0.0018 | 0.7321 ± 0.0026 | 68.39 ± 0.13 | 17.579 ± 0.151 |
+| esmfold | 0.8101 ± 0.0000 | 0.7042 ± 0.0000 | 64.08 ± 0.00 | 15.397 ± 0.000 |
+| chai1 | 0.7977 ± 0.0009 | 0.6928 ± 0.0025 | 62.12 ± 0.13 | 17.479 ± 0.679 |
+| omegafold | 0.7697 ± 0.0000 | 0.6690 ± 0.0000 | 59.19 ± 0.00 | 17.345 ± 0.000 |
+
+GDT_TS above is the `external_tmscore_matched` method (2026-07-30 re-scoring), which is why the percentages are not comparable with the `internal_iterative_ca` values in the table above. lDDT-Cα, TM-score and Cα-RMSD are unaffected by that change.
+
+**Only 2 of 8 models are deterministic.** esmfold and omegafold reproduce exactly (0.000000 spread on all 45 targets). At the per-target level, 152 of the 315 non-af2 (target, model) pairs exceed a 1e-3 lDDT-Cα tolerance — max spread boltz2 0.105, openfold 0.089, chai1 0.082, protenix 0.062, colabfold 0.0055. **chai1 is MSA-free**, so its spread cannot come from MSA rebuild; that isolates genuine sampling nondeterminism in the diffusion-based models. Per-target detail: `results/replicate_summary/reps_accuracy_consistency.csv`.
+
+Per-target variation largely averages out at the benchmark level (all across-rep stds ≤ 0.0034 lDDT-Cα), so the overall ranking is stable — **except at the top**: colabfold leads openfold by 0.0007 lDDT-Cα, smaller than openfold's own across-rep std of 0.0018, and the order flips by metric (openfold leads on GDT_TS, they tie on TM-score to 4 d.p.). **colabfold and openfold are not separable in this benchmark.**
+
+#### Cost (n=3)
+
+Attributed per-model cost — correct for comparing models to each other, but **not additive across models**, because the shared ColabFold/MMseqs2 MSA is built once per replicate and re-charged to colabfold, openfold, protenix and boltz2.
+
+| Model | Total runtime (h) | Inference runtime (h) | CO₂ (g) |
+|---|---:|---:|---:|
+| colabfold | 8.36 ± 0.18 | 1.81 ± 0.04 | 393 ± 112 |
+| protenix | 7.72 ± 0.19 | 1.17 ± 0.03 | 378 ± 57 |
+| openfold | 7.43 ± 0.17 | 0.88 ± 0.06 | 401 ± 67 |
+| boltz2 | 7.38 ± 0.17 | 0.82 ± 0.01 | 362 ± 58 |
+| af2 | 19.83 (n=1) + 1.75 ± 0.04 † | 1.75 ± 0.04 | 1873 (n=1) + 218 † |
+| chai1 | 1.67 ± 0.30 | 1.67 ± 0.30 | 208 ± 20 |
+| omegafold | 1.42 ± 0.10 | 1.42 ± 0.10 | 210 ± 26 |
+| esmfold | 0.78 ± 0.10 | 0.78 ± 0.10 | 79 ± 7 |
+
+Whole-benchmark cost with the shared MSA counted once (`benchmark_incremental_*`): **16.5 ± 0.27 h** per replicate. rep1's 37.4 h is not comparable, because rep1 built AF2's MSA and rep2/rep3 reused it.
+
+Three caveats on the cost figures:
+
+- † **AF2's MSA is measured once.** rep2/rep3 reuse rep1's `features.pkl` (`AF2_REUSE_FEATURES_ROOT`), which saves ~20 h per replicate. AF2's MSA build (19.83 h, 1873 g CO₂ — the single largest cost item in the benchmark, exceeding a whole replicate's incremental cost) therefore stays **n=1**, and the ± covers only AF2 inference. The MSA stage is deterministic given fixed databases, so this affects the cost error bar, not accuracy.
+- **Energy/CO₂ error bars are inflated by rep1.** rep2 and rep3 agree to within ~1% on energy, while rep1 is a systematic outlier in both directions by model group (~30–58% higher for the shared-MSA consumers, 14–20% lower for the MSA-free ones) even where runtime is nearly identical. This looks like a measurement/attribution difference in rep1, not run-to-run variance. Runtime is unaffected; prefer rep2+rep3 for energy until rep1's provenance is checked.
+- Runtime reproducibility is ~2% CV for the MSA-dominated models. The higher CV for the MSA-free models (chai1 18%, esmfold 13%) reflects their small totals, not instability.
+
+### MSA cross-mode variants (2026-07-09)
+
+A follow-up run flips the MSA mode of four models on the **same 45 targets**, to isolate the effect of the MSA alone. Each variant uses a distinct model label; the eight-model results above are unchanged. Baseline (default-mode) values below are the GPU 8-model set (`results/2026-06-09-combine-8models-gpu`).
+
+- **Source run:** `results/20260709_casp15_casp16_unique_lt1000_msa-variants` (45/45 predicted on GPU and scored, `--match-mode sequence`).
+- **Per-model JSON + scores:** `results/20260709_.../{chai1_msa,boltz2_nomsa,colabfold_nomsa,openfold_nomsa}.json` and `results/20260709_.../scores/all_targets_model_summary.csv`.
+- For `chai1_msa`, the shared ColabFold/MMseqs2 A3M is converted to Chai-1's `.aligned.pqt` format; the three `*_nomsa` variants take single-sequence input.
+- **GDT_TS** is computed with the TMscore binary on the sequence-matched Cα atoms; **CO₂/job** and **Time/job** are CodeCarbon world-average emissions and wall-clock per target. Sequence matching used a mean of **284 aligned Cα** per target (range 70–632), identical across variants.
+
+| Variant | Mode vs default | Mean lDDT-Cα | Mean TM-score | Mean GDT_TS (%) | Mean Cα-RMSD (Å) | CO₂/job (g) | Time/job (s) | Base (lDDT-Cα) |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| chai1_msa | +ColabFold MSA (default: none) | 0.562 | 0.533 | 43.89 | 24.996 | 3.29 | 141 | chai1 0.799 |
+| boltz2_nomsa | −MSA, single-sequence (default: MSA) | 0.421 | 0.387 | 27.12 | 29.835 | 1.31 | 67 | boltz2 0.864 |
+| colabfold_nomsa | −MSA, single-sequence (default: MSA) | 0.307 | 0.290 | 16.89 | 32.431 | 2.07 | 128 | colabfold 0.876 |
+| openfold_nomsa | −MSA, single-sequence (default: MSA) | 0.307 | 0.288 | 16.92 | 32.839 | 1.92 | 70 | openfold 0.875 |
+
+`chai1_msa` reuses the shared ColabFold MSA and is not re-charged its MSA-build cost, so its carbon is inference-only; the `*_nomsa` variants build no MSA. Removing the MSA collapses the three MSA-dependent models as expected: ColabFold and OpenFold run AlphaFold2 Evoformer weights and lose almost all accuracy without an alignment (lDDT-Cα ≈ 0.31), and Boltz-2 drops from 0.864 to 0.421. Feeding the ColabFold MSA to Chai-1 is the notable case — it lowers the mean (0.562 vs 0.799 single-sequence) and is strongly bimodal: it improves 10/45 targets (e.g. T1145 +0.32, T1159 +0.30) but degrades 22/45, several to near-unfolded structures (T1185s2 −0.72, T1272s4 −0.67), concentrated on the multi-domain CASP subdomain targets (T1137sX / T1272sX / T1114sX / T1185sX). This is **genuine Chai-1 behavior, not an artifact of our conversion**: re-folding all 45 targets with Chai-1's own online MSA server (properly source-tagged and species-paired) gives mean 0.563 vs our ColabFold-A3M 0.562 (mean |Δ| = 0.005, max 0.025 lDDT-Cα per target), collapsing on the same targets. It is consistent with reported "MSA can hurt AF3-style models" behavior, acknowledged by Chai-1's maintainers ([chai-lab #277](https://github.com/chaidiscovery/chai-lab/discussions/277)) and reported for Boltz ([#627](https://github.com/jwohlwend/boltz/issues/627)) — though those cases concern irrelevant MSAs on designed proteins, whereas here it is natural targets with deep, relevant alignments. The online-MSA folds are a diagnostic only (remote MSA server, so not carbon-valid) and are not part of the benchmark.
+
 ## Repository Layout
 
 ```

@@ -20,9 +20,19 @@ Writes to <out-dir>/ (default: ../carbon4science.github.io/results/):
   score_metric_definitions.csv  (if present in scores dir)
   score_metric_definitions.md   (if present in scores dir)
 
+With --replicate-dirs, each {model}.json additionally carries the per-replicate
+aggregate scores and cost totals, plus mean/std across replicates. Per-protein blocks
+still come from the primary replicate only.
+
 Usage (from repo root):
     python scripts/export_combined_to_carbon4science.py
     python scripts/export_combined_to_carbon4science.py --out-dir /tmp/c4s-preview
+    python scripts/export_combined_to_carbon4science.py \
+        --run-dir results/2026-06-09-combine-8models-gpu \
+        --replicate-dirs results/2026-06-09-combine-8models-gpu \
+                         results/20260802_082154_combine-8models-gpu_rep2 \
+                         results/20260803_005751_combine-8models-gpu_rep3 \
+        --replicate-labels rep1 rep2 rep3
 """
 
 from __future__ import annotations
@@ -31,6 +41,7 @@ import argparse
 import csv
 import json
 import shutil
+import statistics
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -42,11 +53,18 @@ BENCHMARK_NAME = "casp15_casp16_unique_lt1000_combined_8models_20260606"
 MODEL_ORDER = ["esmfold", "omegafold", "boltz2", "chai1", "colabfold", "openfold", "protenix", "af2"]
 
 # Models that build no MSA themselves.
-MSA_FREE = {"esmfold", "omegafold", "boltz2", "chai1"}
+MSA_FREE = {"esmfold", "omegafold", "chai1"}
 # Models using a colabfold/MMseqs2 MSA (msa_build_* columns).
-MSA_COLABFOLD = {"colabfold", "openfold", "protenix"}
+# boltz2 reuses the shared ColabFold/MMseqs2 A3M and is charged the same MSA-build
+# cost as openfold/protenix so that all four shared-MSA models are apples-to-apples.
+MSA_COLABFOLD = {"colabfold", "openfold", "protenix", "boltz2"}
 # af2 uses split msa_feature_* + af2_inference_* columns.
 AF2_SET = {"af2"}
+
+# MSA cross-mode variants (2026-07 run): single-sequence variants build no MSA;
+# chai1_msa reuses the shared ColabFold A3M (like the MSA_COLABFOLD group).
+MSA_FREE |= {"boltz2_nomsa", "colabfold_nomsa", "openfold_nomsa"}
+MSA_COLABFOLD |= {"chai1_msa"}
 
 SCORE_METRIC_NOTE = (
     "GDT_TS is on 0-1 scale; GDT_TS_percent is on 0-100 scale (same value × 100). "
@@ -205,6 +223,65 @@ def aggregate_with_aliases(row: dict[str, str]) -> dict:
     return out
 
 
+# ── Replicates ────────────────────────────────────────────────────────────────
+
+# Per-model cost totals summed over targets, for one replicate. Note these are
+# *attributed* costs: the shared ColabFold MSA is charged to every model that reuses
+# it, so they compare models to each other but are not additive across models.
+REPLICATE_COST_COLS = [
+    "total_runtime_sec",
+    "inference_runtime_sec",
+    "msa_build_runtime_sec",
+    "total_energy_consumed_kwh",
+    "inference_energy_consumed_kwh",
+    "total_carbon_emissions_g",
+    "inference_carbon_emissions_g",
+]
+
+
+def replicate_cost_totals(run_dir: Path) -> dict[str, dict[str, float]]:
+    """Sum the cost columns over targets, per model, for one replicate."""
+    totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for row in read_csv(run_dir / "metadata" / "prediction_manifest.csv"):
+        model = row.get("model", "")
+        if not model:
+            continue
+        for col in REPLICATE_COST_COLS:
+            try:
+                totals[model][col] += float(row.get(col) or 0.0)
+            except (TypeError, ValueError):
+                continue
+    return {m: dict(v) for m, v in totals.items()}
+
+
+def across_rep_stats(by_label: dict[str, dict]) -> dict:
+    """mean/std/n across replicates for every numeric metric present.
+
+    std is the sample standard deviation (ddof=1), matching
+    scripts/06_summarize_across_reps.py; it is null when only one replicate has
+    the metric. `values` keeps the individual per-replicate numbers so a consumer
+    can recompute or plot them.
+    """
+    metrics = sorted({k for row in by_label.values() for k in row})
+    out: dict = {}
+    for metric in metrics:
+        values = {
+            label: row[metric]
+            for label, row in by_label.items()
+            if isinstance(row.get(metric), (int, float)) and not isinstance(row.get(metric), bool)
+        }
+        if not values:
+            continue
+        nums = list(values.values())
+        out[metric] = {
+            "mean": statistics.fmean(nums),
+            "std": statistics.stdev(nums) if len(nums) > 1 else None,
+            "n_reps": len(nums),
+            "values": values,
+        }
+    return out
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -222,7 +299,43 @@ def main() -> None:
         default=str(REPO_ROOT.parent / "carbon4science.github.io" / "results"),
         help="Output directory. Default: %(default)s",
     )
+    ap.add_argument(
+        "--models",
+        default=",".join(MODEL_ORDER),
+        help=(
+            "Comma-separated models to export (overrides the default 8-model order). "
+            "Use with --json-only to add new-method JSONs without touching the shared "
+            "8-model CSVs. Default: %(default)s"
+        ),
+    )
+    ap.add_argument(
+        "--replicate-dirs",
+        nargs="*",
+        default=[],
+        help=(
+            "Combine run folders for each replicate of the same benchmark. When given, "
+            "every {model}.json gains a `replicates` block (per-rep aggregate scores and "
+            "cost totals) and `aggregate_summary_across_reps` (mean/std/n over reps). "
+            "Per-protein blocks still come from --run-dir only."
+        ),
+    )
+    ap.add_argument(
+        "--replicate-labels",
+        nargs="*",
+        default=[],
+        help="Labels for --replicate-dirs (default: directory names). Must be unique.",
+    )
+    ap.add_argument(
+        "--json-only",
+        action="store_true",
+        help=(
+            "Write only per-model JSON files; skip the shared benchmark-*.csv / "
+            "collection-manifest outputs so an existing 8-model export is not clobbered."
+        ),
+    )
     args = ap.parse_args()
+
+    model_order = [m.strip() for m in args.models.split(",") if m.strip()]
 
     run_dir = REPO_ROOT / args.run_dir
     out_dir = Path(args.out_dir)
@@ -230,6 +343,44 @@ def main() -> None:
 
     print(f"Source : {run_dir}")
     print(f"Output : {out_dir}")
+
+    # ── Replicate aggregates (optional) ───────────────────────────────────────
+    rep_dirs = [REPO_ROOT / d for d in args.replicate_dirs]
+    for d in rep_dirs:
+        if not d.is_dir():
+            raise SystemExit(f"Replicate directory not found: {d}")
+    if args.replicate_labels:
+        if len(args.replicate_labels) != len(rep_dirs):
+            raise SystemExit("--replicate-labels must have the same length as --replicate-dirs")
+        rep_labels = list(args.replicate_labels)
+    else:
+        rep_labels = [d.name for d in rep_dirs]
+    if len(set(rep_labels)) != len(rep_labels):
+        raise SystemExit(f"Replicate labels must be unique, got: {rep_labels}")
+
+    # label -> model -> {scores aggregate, cost totals}
+    rep_scores: dict[str, dict[str, dict]] = {}
+    rep_costs: dict[str, dict[str, dict[str, float]]] = {}
+    primary_label = ""
+    if rep_dirs:
+        for label, d in zip(rep_labels, rep_dirs):
+            rep_scores[label] = {
+                r["model"]: aggregate_with_aliases(r)
+                for r in read_csv(d / "scores" / "all_targets_model_summary.csv")
+            }
+            rep_costs[label] = replicate_cost_totals(d)
+        # The replicate whose per-protein detail is exported in the main blocks.
+        primary = run_dir.resolve()
+        primary_label = next(
+            (lab for lab, d in zip(rep_labels, rep_dirs) if d.resolve() == primary),
+            "",
+        )
+        if not primary_label:
+            print(f"WARNING: --run-dir {run_dir.name} is not among --replicate-dirs; "
+                  "per-protein blocks and the replicate stats come from different runs.",
+                  file=sys.stderr)
+        print(f"Replicates: {', '.join(rep_labels)}"
+              + (f" (primary: {primary_label})" if primary_label else ""))
 
     # ── Load source data ──────────────────────────────────────────────────────
     manifest_rows = read_csv(run_dir / "metadata" / "prediction_manifest.csv")
@@ -259,7 +410,7 @@ def main() -> None:
     all_score_rows: list[dict] = []  # benchmark_scores_all_models.csv / per_prediction_scores
     status_rows:   list[dict] = []   # per_protein_status
 
-    for model in MODEL_ORDER:
+    for model in model_order:
         for tid in all_tids:
             mrow = man_key.get((tid, model), {})
             trow = tgt_by_id.get(tid, {})
@@ -388,50 +539,53 @@ def main() -> None:
 
     # ── benchmark_model_summary_all_models.csv ────────────────────────────────
     summary_rows: list[dict] = []
-    for model in MODEL_ORDER:
+    for model in model_order:
         if model in agg_by_mod:
             summary_rows.append(aggregate_with_aliases(agg_by_mod[model]))
 
-    # ── Write CSVs ────────────────────────────────────────────────────────────
-    write_csv(out_dir / "benchmark-score.csv", score_rows)
-    write_csv(out_dir / "benchmark-metadata.csv", metadata_rows)
-    write_csv(out_dir / "benchmark_metadata_all_models.csv", metadata_rows)   # alias
-    write_csv(out_dir / "benchmark_scores_all_models.csv", all_score_rows)
-    write_csv(out_dir / "benchmark_model_summary_all_models.csv", summary_rows)
-    write_csv(out_dir / "benchmark-dataset.csv", dataset_rows)
+    # ── Write CSVs (skipped in --json-only so an existing export is not clobbered) ─
+    if args.json_only:
+        print("\n[--json-only] Skipping shared benchmark-*.csv / collection-manifest writes.")
+    else:
+        write_csv(out_dir / "benchmark-score.csv", score_rows)
+        write_csv(out_dir / "benchmark-metadata.csv", metadata_rows)
+        write_csv(out_dir / "benchmark_metadata_all_models.csv", metadata_rows)   # alias
+        write_csv(out_dir / "benchmark_scores_all_models.csv", all_score_rows)
+        write_csv(out_dir / "benchmark_model_summary_all_models.csv", summary_rows)
+        write_csv(out_dir / "benchmark-dataset.csv", dataset_rows)
 
-    # benchmark_collection_manifest.csv
-    manifest_entries = [
-        ("exported_at_utc", exported_at),
-        ("benchmark_name", BENCHMARK_NAME),
-        ("source_result_dir", source_result_dir),
-        ("target_set", str((run_dir / "metadata" / "scoring_targets.csv").relative_to(REPO_ROOT))),
-        ("dataset_file", "results/benchmark-dataset.csv"),
-        ("n_dataset_rows", str(len(dataset_rows))),
-        ("n_targets", str(len(all_tids))),
-        ("n_models", str(len(MODEL_ORDER))),
-        ("n_model_json_files", str(len(MODEL_ORDER))),
-        ("n_score_rows", str(len(score_rows))),
-        ("n_metadata_rows_all", str(len(metadata_rows))),
-        ("match_mode", "sequence"),
-        ("score_scale_GDT_TS", "0-1; higher is better"),
-        ("score_scale_GDT_TS_percent", "0-100; higher is better"),
-    ]
-    with (out_dir / "benchmark_collection_manifest.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["key", "value"], lineterminator="\n")
-        w.writeheader()
-        for k, v in manifest_entries:
-            w.writerow({"key": k, "value": v})
+        # benchmark_collection_manifest.csv
+        manifest_entries = [
+            ("exported_at_utc", exported_at),
+            ("benchmark_name", BENCHMARK_NAME),
+            ("source_result_dir", source_result_dir),
+            ("target_set", str((run_dir / "metadata" / "scoring_targets.csv").relative_to(REPO_ROOT))),
+            ("dataset_file", "results/benchmark-dataset.csv"),
+            ("n_dataset_rows", str(len(dataset_rows))),
+            ("n_targets", str(len(all_tids))),
+            ("n_models", str(len(model_order))),
+            ("n_model_json_files", str(len(model_order))),
+            ("n_score_rows", str(len(score_rows))),
+            ("n_metadata_rows_all", str(len(metadata_rows))),
+            ("match_mode", "sequence"),
+            ("score_scale_GDT_TS", "0-1; higher is better"),
+            ("score_scale_GDT_TS_percent", "0-100; higher is better"),
+        ]
+        with (out_dir / "benchmark_collection_manifest.csv").open("w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["key", "value"], lineterminator="\n")
+            w.writeheader()
+            for k, v in manifest_entries:
+                w.writerow({"key": k, "value": v})
 
-    # score_metric_definitions (copy from scores dir if present, else skip)
-    for ext in ("csv", "md"):
-        src = run_dir / "scores" / f"score_metric_definitions.{ext}"
-        if src.exists():
-            shutil.copy2(src, out_dir / f"score_metric_definitions.{ext}")
+        # score_metric_definitions (copy from scores dir if present, else skip)
+        for ext in ("csv", "md"):
+            src = run_dir / "scores" / f"score_metric_definitions.{ext}"
+            if src.exists():
+                shutil.copy2(src, out_dir / f"score_metric_definitions.{ext}")
 
-    print(f"\nCSVs written:")
-    for p in sorted(out_dir.glob("*.csv")):
-        print(f"  {p.name} ({p.stat().st_size:,} bytes)")
+        print(f"\nCSVs written:")
+        for p in sorted(out_dir.glob("*.csv")):
+            print(f"  {p.name} ({p.stat().st_size:,} bytes)")
 
     # ── Per-model JSON files ──────────────────────────────────────────────────
     score_by_model:    dict[str, list] = defaultdict(list)
@@ -449,7 +603,7 @@ def main() -> None:
         status_by_model_d[row["model"]].append(row)
 
     print(f"\nPer-model JSON files:")
-    for model in MODEL_ORDER:
+    for model in model_order:
         agg = aggregate_with_aliases(agg_by_mod.get(model, {}))
         n_success = sum(1 for r in status_by_model_d[model] if r["status"] == "success")
         payload = {
@@ -470,6 +624,36 @@ def main() -> None:
             "per_protein_runtime_metadata": meta_by_model.get(model, []),
             "per_protein_status": status_by_model_d.get(model, []),
         }
+
+        # Per-replicate results + across-replicate mean/std. Kept alongside the
+        # existing keys rather than replacing them, so consumers of the single-run
+        # schema keep working; `aggregate_summary` above is the primary replicate.
+        if rep_dirs:
+            replicates = []
+            score_by_label: dict[str, dict] = {}
+            cost_by_label: dict[str, dict] = {}
+            for label, d in zip(rep_labels, rep_dirs):
+                agg_rep = rep_scores[label].get(model, {})
+                cost_rep = rep_costs[label].get(model, {})
+                if not agg_rep and not cost_rep:
+                    continue
+                replicates.append({
+                    "replicate": label,
+                    "is_primary": label == primary_label,
+                    "source_result_dir": str(d.relative_to(REPO_ROOT)),
+                    "aggregate_summary": agg_rep,
+                    "cost_totals": cost_rep,
+                })
+                if agg_rep:
+                    score_by_label[label] = agg_rep
+                if cost_rep:
+                    cost_by_label[label] = cost_rep
+            payload["n_replicates"] = len(replicates)
+            payload["primary_replicate"] = primary_label
+            payload["replicates"] = replicates
+            payload["aggregate_summary_across_reps"] = across_rep_stats(score_by_label)
+            payload["cost_totals_across_reps"] = across_rep_stats(cost_by_label)
+
         out_path = out_dir / f"{model}.json"
         out_path.write_text(json.dumps(payload, indent=2) + "\n")
         print(f"  {model}.json  (n_success={n_success}/{len(all_tids)})")
@@ -478,7 +662,7 @@ def main() -> None:
     print(f"\n{'─'*60}")
     print(f"Export complete → {out_dir}")
     print(f"\nAggregate (mean lDDT-Cα):")
-    for model in MODEL_ORDER:
+    for model in model_order:
         agg = agg_by_mod.get(model, {})
         lddt = agg.get("mean_best_lddt_ca", "")
         try:
