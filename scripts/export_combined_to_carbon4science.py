@@ -268,6 +268,22 @@ def shared_msa_consumers(run_dir: Path) -> dict[str, set[str]]:
     return consumers
 
 
+def replicate_stages(run_dir: Path) -> dict[str, set[str]]:
+    """model -> the CodeCarbon stages it actually ran in this replicate.
+
+    Used to decide whether a mean over replicates is meaningful: a model whose stage
+    set changes between replicates (af2, which builds its MSA in rep1 and reuses
+    features.pkl afterwards) yields an average over a mixture of two different
+    experiments, not a distribution.
+    """
+    stages: dict[str, set[str]] = defaultdict(set)
+    for path in sorted(run_dir.glob("predictions/*/*/carbon/*.csv")):
+        stage = next((s for suffix, s in CARBON_STAGE_SUFFIXES if path.name.endswith(suffix)), None)
+        if stage is not None:
+            stages[path.parent.parent.name].add(stage)
+    return stages
+
+
 def replicate_device_energy(run_dir: Path) -> dict[str, dict[str, float]]:
     """Sum CPU/GPU/RAM energy and stage wall time over every CodeCarbon CSV, per model.
 
@@ -452,6 +468,7 @@ def main() -> None:
     # label -> model -> {scores aggregate, cost totals}
     rep_scores: dict[str, dict[str, dict]] = {}
     rep_costs: dict[str, dict[str, dict[str, float]]] = {}
+    rep_stages: dict[str, dict[str, set[str]]] = {}
     primary_label = ""
     if rep_dirs:
         for label, d in zip(rep_labels, rep_dirs):
@@ -460,6 +477,7 @@ def main() -> None:
                 for r in read_csv(d / "scores" / "all_targets_model_summary.csv")
             }
             rep_costs[label] = replicate_cost_totals(d)
+            rep_stages[label] = replicate_stages(d)
         # The replicate whose per-protein detail is exported in the main blocks.
         primary = run_dir.resolve()
         primary_label = next(
@@ -732,6 +750,7 @@ def main() -> None:
                     "replicate": label,
                     "is_primary": label == primary_label,
                     "source_result_dir": str(d.relative_to(REPO_ROOT)),
+                    "stages_run": sorted(rep_stages.get(label, {}).get(model, set())),
                     "aggregate_summary": agg_rep,
                     "cost_totals": cost_rep,
                 })
@@ -744,6 +763,25 @@ def main() -> None:
             payload["replicates"] = replicates
             payload["aggregate_summary_across_reps"] = across_rep_stats(score_by_label)
             payload["cost_totals_across_reps"] = across_rep_stats(cost_by_label)
+
+            # A model whose stage set changes between replicates (af2: builds its MSA in
+            # rep1, reuses features.pkl afterwards) gives a mean over a mixture of two
+            # different experiments, so no mean/std over its cost is interpretable --
+            # af2's wall time comes out 8.78 +/- 12.24 h. Flag it rather than let a
+            # consumer plot the error bar. Accuracy is unaffected and stays comparable.
+            stage_sets = {label: frozenset(rep_stages.get(label, {}).get(model, set()))
+                          for label in rep_labels if label in rep_stages}
+            stage_sets = {k: v for k, v in stage_sets.items() if v}
+            comparable = len(set(stage_sets.values())) <= 1
+            payload["cost_totals_across_reps_comparable"] = comparable
+            payload["cost_totals_across_reps_note"] = (
+                "" if comparable else
+                "Stages differ between replicates ("
+                + "; ".join(f"{k}={'+'.join(sorted(v))}" for k, v in stage_sets.items())
+                + "). mean/std over cost_totals_across_reps mixes different experiments "
+                  "and is not interpretable; use the per-replicate values in replicates[] "
+                  "and compare like stages only. Accuracy metrics are unaffected."
+            )
 
         out_path = out_dir / f"{model}.json"
         out_path.write_text(json.dumps(payload, indent=2) + "\n")
