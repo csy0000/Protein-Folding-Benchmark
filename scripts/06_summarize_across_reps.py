@@ -180,6 +180,10 @@ def device_energy_tables(dev: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame,
         gpu_energy_kwh=("gpu_energy", "sum"),
         ram_energy_kwh=("ram_energy", "sum"),
         measured_energy_kwh=("energy_consumed", "sum"),
+        # CodeCarbon's own wall-clock for the stage. Independent of the manifest's
+        # runtime columns, so the two are a cross-check on each other. Wall time is
+        # meaningful per *stage*; it is not attributable per device.
+        wall_time_sec=("duration", "sum"),
         n_files=("target_id", "count"),
     )
     by_stage = dev.groupby(["rep", "model", "stage"], sort=True).agg(**agg).reset_index()
@@ -193,7 +197,7 @@ def device_energy_tables(dev: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame,
     by_model["gpu_share_pct"] = gpu_share(by_model)
 
     metrics = ["cpu_energy_kwh", "gpu_energy_kwh", "ram_energy_kwh",
-               "measured_energy_kwh", "gpu_share_pct"]
+               "measured_energy_kwh", "gpu_share_pct", "wall_time_sec"]
     rows = []
     for model, group in by_model.groupby("model", sort=True):
         row = {"model": model, "n_reps": int(group["rep"].nunique())}
@@ -497,7 +501,7 @@ def write_markdown(summary: pd.DataFrame, totals: pd.DataFrame, acc: pd.DataFram
             "",
         ]
         d_headers = ["model", "n_reps", "CPU (kWh)", "GPU (kWh)", "RAM (kWh)",
-                     "measured total (kWh)", "GPU share (%)"]
+                     "measured total (kWh)", "GPU share (%)", "stage wall time (h)"]
         lines += ["| " + " | ".join(d_headers) + " |",
                   "| " + " | ".join(["---"] * len(d_headers)) + " |"]
         for _, row in dev_across.iterrows():
@@ -509,6 +513,7 @@ def write_markdown(summary: pd.DataFrame, totals: pd.DataFrame, acc: pd.DataFram
                 pm(row["mean_ram_energy_kwh"], row["std_ram_energy_kwh"], 1.0, 4),
                 pm(row["mean_measured_energy_kwh"], row["std_measured_energy_kwh"], 1.0, 4),
                 pm(row["mean_gpu_share_pct"], row["std_gpu_share_pct"], 1.0, 1),
+                pm(row["mean_wall_time_sec"], row["std_wall_time_sec"], 3600.0, 2),
             ]) + " |")
         if dev_by_stage is not None and not dev_by_stage.empty:
             stages = sorted(set(dev_by_stage["stage"]))

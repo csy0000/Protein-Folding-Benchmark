@@ -37,16 +37,16 @@ Per-model cost is *attributed* cost: correct for comparing models to each other,
 
 From the per-(target, model, stage) CodeCarbon CSVs -- the only device-resolved measurement in the pipeline, since the prediction manifest records no device. This splits **energy, not wall time**: a stage occupies wall-clock while both CPU and GPU are partly busy, so there is no meaningful per-device wall time.
 
-| model | n_reps | CPU (kWh) | GPU (kWh) | RAM (kWh) | measured total (kWh) | GPU share (%) |
-| --- | --- | --- | --- | --- | --- | --- |
-| af2 | 3 | 0.3731 ± 0.5204 | 0.6755 ± 0.7802 | 0.8115 ± 1.1515 | 1.8602 ± 2.4519 | 44.9 ± 10.0 |
-| colabfold | 3 | 0.0824 ± 0.0018 | 0.4571 ± 0.2356 | 0.2871 ± 0.0063 | 0.8266 ± 0.2365 | 53.1 ± 11.4 |
-| omegafold | 3 | 0.0422 ± 0.0256 | 0.2981 ± 0.0133 | 0.1016 ± 0.0421 | 0.4419 ± 0.0544 | 68.5 ± 12.3 |
-| chai1 | 3 | 0.0474 ± 0.0266 | 0.2745 ± 0.0233 | 0.1158 ± 0.0398 | 0.4376 ± 0.0431 | 63.5 ± 12.3 |
-| openfold | 3 | 0.0262 ± 0.0156 | 0.1800 ± 0.0082 | 0.0628 ± 0.0260 | 0.2689 ± 0.0363 | 68.0 ± 12.2 |
-| boltz2 | 3 | 0.0250 ± 0.0152 | 0.1035 ± 0.0149 | 0.0594 ± 0.0265 | 0.1879 ± 0.0556 | 57.3 ± 11.7 |
-| protenix | 3 | 0.0362 ± 0.0232 | 0.0986 ± 0.0106 | 0.0862 ± 0.0405 | 0.2210 ± 0.0596 | 47.7 ± 17.8 |
-| esmfold | 3 | 0.0229 ± 0.0124 | 0.0893 ± 0.0182 | 0.0547 ± 0.0204 | 0.1669 ± 0.0146 | 54.4 ± 16.5 |
+| model | n_reps | CPU (kWh) | GPU (kWh) | RAM (kWh) | measured total (kWh) | GPU share (%) | stage wall time (h) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| af2 | 3 | 0.3731 ± 0.5204 | 0.6755 ± 0.7802 | 0.8115 ± 1.1515 | 1.8602 ± 2.4519 | 44.9 ± 10.0 | 8.78 ± 12.24 |
+| colabfold | 3 | 0.0824 ± 0.0018 | 0.4571 ± 0.2356 | 0.2871 ± 0.0063 | 0.8266 ± 0.2365 | 53.1 ± 11.4 | 8.31 ± 0.18 |
+| omegafold | 3 | 0.0422 ± 0.0256 | 0.2981 ± 0.0133 | 0.1016 ± 0.0421 | 0.4419 ± 0.0544 | 68.5 ± 12.3 | 1.40 ± 0.10 |
+| chai1 | 3 | 0.0474 ± 0.0266 | 0.2745 ± 0.0233 | 0.1158 ± 0.0398 | 0.4376 ± 0.0431 | 63.5 ± 12.3 | 1.65 ± 0.30 |
+| openfold | 3 | 0.0262 ± 0.0156 | 0.1800 ± 0.0082 | 0.0628 ± 0.0260 | 0.2689 ± 0.0363 | 68.0 ± 12.2 | 0.86 ± 0.06 |
+| boltz2 | 3 | 0.0250 ± 0.0152 | 0.1035 ± 0.0149 | 0.0594 ± 0.0265 | 0.1879 ± 0.0556 | 57.3 ± 11.7 | 0.80 ± 0.01 |
+| protenix | 3 | 0.0362 ± 0.0232 | 0.0986 ± 0.0106 | 0.0862 ± 0.0405 | 0.2210 ± 0.0596 | 47.7 ± 17.8 | 1.15 ± 0.03 |
+| esmfold | 3 | 0.0229 ± 0.0124 | 0.0893 ± 0.0182 | 0.0547 ± 0.0204 | 0.1669 ± 0.0146 | 54.4 ± 16.5 | 0.76 ± 0.10 |
 
 Stages present: inference, msa_build, msa_features. Per-stage and per-replicate breakdowns are in reps_device_energy_by_stage.csv and reps_device_energy_per_rep.csv.
 

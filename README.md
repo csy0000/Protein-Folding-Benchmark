@@ -66,18 +66,20 @@ Three caveats on the cost figures:
 
 CPU / GPU / RAM energy from the per-(target, model, stage) CodeCarbon CSVs, summed over all stages. **This is a device split of energy, not of wall time.** The prediction manifest records no device at all, and a stage occupies wall-clock while both CPU and GPU are partly busy, so there is no meaningful per-device wall time to report. Source: `results/replicate_summary/reps_device_energy_{summary,per_rep,by_stage}.csv`.
 
-| Model | CPU (kWh) | GPU (kWh) | RAM (kWh) | GPU share (%) |
-|---|---:|---:|---:|---:|
-| af2 † | 0.3731 ± 0.5204 | 0.6755 ± 0.7802 | 0.8115 ± 1.1515 | 44.9 ± 10.0 |
-| colabfold | 0.0824 ± 0.0018 | 0.4571 ± 0.2356 | 0.2871 ± 0.0063 | 53.1 ± 11.4 |
-| omegafold | 0.0422 ± 0.0256 | 0.2981 ± 0.0133 | 0.1016 ± 0.0421 | 68.5 ± 12.3 |
-| chai1 | 0.0474 ± 0.0266 | 0.2745 ± 0.0233 | 0.1158 ± 0.0398 | 63.5 ± 12.3 |
-| openfold | 0.0262 ± 0.0156 | 0.1800 ± 0.0082 | 0.0628 ± 0.0260 | 68.0 ± 12.2 |
-| boltz2 | 0.0250 ± 0.0152 | 0.1035 ± 0.0149 | 0.0594 ± 0.0265 | 57.3 ± 11.7 |
-| protenix | 0.0362 ± 0.0232 | 0.0986 ± 0.0106 | 0.0862 ± 0.0405 | 47.7 ± 17.8 |
-| esmfold | 0.0229 ± 0.0124 | 0.0893 ± 0.0182 | 0.0547 ± 0.0204 | 54.4 ± 16.5 |
+| Model | CPU (kWh) | GPU (kWh) | RAM (kWh) | GPU share (%) | Measured wall time (h) |
+|---|---:|---:|---:|---:|---:|
+| af2 † | 0.3731 ± 0.5204 | 0.6755 ± 0.7802 | 0.8115 ± 1.1515 | 44.9 ± 10.0 | 8.78 ± 12.24 † |
+| colabfold | 0.0824 ± 0.0018 | 0.4571 ± 0.2356 | 0.2871 ± 0.0063 | 53.1 ± 11.4 | 8.31 ± 0.18 |
+| omegafold | 0.0422 ± 0.0256 | 0.2981 ± 0.0133 | 0.1016 ± 0.0421 | 68.5 ± 12.3 | 1.40 ± 0.10 |
+| chai1 | 0.0474 ± 0.0266 | 0.2745 ± 0.0233 | 0.1158 ± 0.0398 | 63.5 ± 12.3 | 1.65 ± 0.30 |
+| openfold ‡ | 0.0262 ± 0.0156 | 0.1800 ± 0.0082 | 0.0628 ± 0.0260 | 68.0 ± 12.2 | 0.86 ± 0.06 |
+| boltz2 ‡ | 0.0250 ± 0.0152 | 0.1035 ± 0.0149 | 0.0594 ± 0.0265 | 57.3 ± 11.7 | 0.80 ± 0.01 |
+| protenix ‡ | 0.0362 ± 0.0232 | 0.0986 ± 0.0106 | 0.0862 ± 0.0405 | 47.7 ± 17.8 | 1.15 ± 0.03 |
+| esmfold | 0.0229 ± 0.0124 | 0.0893 ± 0.0182 | 0.0547 ± 0.0204 | 54.4 ± 16.5 | 0.76 ± 0.10 |
 
 Three stages are measured: `inference` (all 8 models), `msa_build` (colabfold's shared MMseqs2 search), and `msa_features` (AF2's jackhmmer/HHblits stage, present in rep1 only — hence af2's large ± and its 0.97 kWh of rep1 CPU energy).
+
+**Wall time here is CodeCarbon's own stage timer, independent of the manifest runtime columns** — the two agree to within 1–3% for every model CodeCarbon measures end to end (colabfold 8.31 vs 8.36 h; omegafold 1.40 vs 1.42; chai1 1.65 vs 1.67; esmfold 0.76 vs 0.78), and colabfold's `msa_build` stage matches the manifest MSA cost to ~0.5% (6.48/6.38/6.71 vs 6.51/6.41/6.74 h). ‡ openfold, boltz2 and protenix look 6–9× smaller here only because CodeCarbon measures their *inference* alone: they consume the shared MSA rather than building it, so their manifest totals include a re-charge that has no CodeCarbon stage of their own. That is an independent confirmation of the non-additivity caveat above rather than a discrepancy.
 
 **This identifies the rep1 energy anomaly as a CodeCarbon attribution difference, not machine variance.** rep1 assigns a mean **69.3%** of measured energy to the GPU; rep2 and rep3 assign **51.1%**, and agree with each other to within ~1%. rep1's CPU energy is 3–4× lower for most models (boltz2 0.0075 vs 0.0337/0.0339 kWh; esmfold 0.0087 vs 0.0300/0.0302; openfold 0.0081 vs 0.0350/0.0353) while total wall-clock is nearly identical. colabfold is the one model whose CPU energy is stable across all three (0.0826 / 0.0805 / 0.0841). So rep1's CPU tracking under-measured, inflating the GPU share and the totals for the models that reuse the shared MSA. **Prefer rep2+rep3 for any energy or CO₂ figure**; runtime and accuracy are unaffected.
 

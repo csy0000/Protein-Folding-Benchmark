@@ -250,7 +250,14 @@ CARBON_STAGE_SUFFIXES = (
 
 
 def replicate_device_energy(run_dir: Path) -> dict[str, dict[str, float]]:
-    """Sum CPU/GPU/RAM energy over every CodeCarbon stage CSV, per model."""
+    """Sum CPU/GPU/RAM energy and stage wall time over every CodeCarbon CSV, per model.
+
+    `codecarbon_wall_time_sec` is CodeCarbon's own stage timer, measured independently
+    of the manifest runtime columns, so the two cross-check each other. Note it covers
+    only stages the model runs itself: models that consume the shared ColabFold MSA
+    rather than building it have no msa_build stage of their own, so their CodeCarbon
+    wall time is inference-only and is smaller than their attributed manifest total.
+    """
     totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for path in sorted(run_dir.glob("predictions/*/*/carbon/*.csv")):
         if not any(path.name.endswith(suffix) for suffix, _ in CARBON_STAGE_SUFFIXES):
@@ -259,7 +266,8 @@ def replicate_device_energy(run_dir: Path) -> dict[str, dict[str, float]]:
         for row in read_csv(path):
             for src, dst in (("cpu_energy", "cpu_energy_kwh"),
                              ("gpu_energy", "gpu_energy_kwh"),
-                             ("ram_energy", "ram_energy_kwh")):
+                             ("ram_energy", "ram_energy_kwh"),
+                             ("duration", "codecarbon_wall_time_sec")):
                 try:
                     totals[model][dst] += float(row.get(src) or 0.0)
                 except (TypeError, ValueError):
