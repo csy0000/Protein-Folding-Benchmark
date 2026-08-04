@@ -24,6 +24,7 @@ Usage:
 
 import argparse
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -137,6 +138,27 @@ CARBON_STAGE_SUFFIXES = (
 DEVICE_ENERGY_COLS = ["cpu_energy", "gpu_energy", "ram_energy", "energy_consumed"]
 
 
+def shared_msa_consumers(run_dir: Path) -> dict[str, set[str]]:
+    """target_id -> models fed a pre-built ColabFold A3M they did not build themselves.
+
+    Keyed on a non-empty shared_msa_a3m_file, which is the only signal that holds in
+    every rep: msa_mode drifts between `shared_precomputed_msa` and `mmseqs2_uniref_env`,
+    and shared_msa_source_model is blank for boltz2 in rep1. Deliberately excludes af2,
+    which reuses its *own* features.pkl rather than the ColabFold alignment.
+    """
+    path = run_dir / "metadata" / "prediction_manifest.csv"
+    consumers: dict[str, set[str]] = defaultdict(set)
+    if not path.is_file():
+        return consumers
+    df = pd.read_csv(path, low_memory=False)
+    if "shared_msa_a3m_file" not in df.columns:
+        return consumers
+    a3m = df["shared_msa_a3m_file"].astype(str).str.strip().str.lower()
+    for _, row in df[a3m.ne("") & a3m.ne("nan")].iterrows():
+        consumers[str(row["target_id"])].add(str(row["model"]))
+    return consumers
+
+
 def load_device_energy(run_dir: Path, rep: str) -> pd.DataFrame:
     """Per (target, model, stage) CPU/GPU/RAM energy from the CodeCarbon CSVs.
 
@@ -165,9 +187,26 @@ def load_device_energy(run_dir: Path, rep: str) -> pd.DataFrame:
                 float(pd.to_numeric(df[column], errors="coerce").fillna(0).sum())
                 if column in df.columns else np.nan
             )
+        record["attributed"] = False
         rows.append(record)
     if not rows:
         print(f"WARNING: {rep}: no CodeCarbon CSVs under {run_dir}/predictions", file=sys.stderr)
+        return pd.DataFrame(rows)
+
+    # Charge the shared ColabFold MSA to the models that consume it, matching how the
+    # manifest already bills them. The build ran once (under colabfold); these rows are
+    # copies, flagged attributed=True, so per-model cost stays comparable between models
+    # while remaining NOT additive across them.
+    consumers = shared_msa_consumers(run_dir)
+    builds = {r["target_id"]: r for r in rows if r["stage"] == "msa_build"}
+    for target_id, models in consumers.items():
+        build = builds.get(target_id)
+        if build is None:
+            continue
+        for model in models:
+            if model == build["model"]:
+                continue
+            rows.append({**build, "model": model, "attributed": True})
     return pd.DataFrame(rows)
 
 
@@ -186,7 +225,10 @@ def device_energy_tables(dev: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame,
         wall_time_sec=("duration", "sum"),
         n_files=("target_id", "count"),
     )
-    by_stage = dev.groupby(["rep", "model", "stage"], sort=True).agg(**agg).reset_index()
+    # by_stage keeps the attributed flag so a reader can separate what a model actually
+    # ran from what it is charged; by_model is the attributed total, matching the
+    # manifest's per-model convention.
+    by_stage = dev.groupby(["rep", "model", "stage", "attributed"], sort=True).agg(**agg).reset_index()
     by_model = dev.groupby(["rep", "model"], sort=True).agg(**agg).reset_index()
 
     def gpu_share(frame: pd.DataFrame) -> pd.Series:

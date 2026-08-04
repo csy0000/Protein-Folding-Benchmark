@@ -249,6 +249,25 @@ CARBON_STAGE_SUFFIXES = (
 )
 
 
+def shared_msa_consumers(run_dir: Path) -> dict[str, set[str]]:
+    """target_id -> models fed a pre-built ColabFold A3M they did not build themselves.
+
+    Keyed on a non-empty shared_msa_a3m_file, the only signal stable across replicates:
+    msa_mode drifts between `shared_precomputed_msa` and `mmseqs2_uniref_env`, and
+    shared_msa_source_model is blank for boltz2 in rep1. Excludes af2, which reuses its
+    own features.pkl rather than the ColabFold alignment.
+    """
+    consumers: dict[str, set[str]] = defaultdict(set)
+    path = run_dir / "metadata" / "prediction_manifest.csv"
+    if not path.is_file():
+        return consumers
+    for row in read_csv(path):
+        a3m = (row.get("shared_msa_a3m_file") or "").strip()
+        if a3m and a3m.lower() != "nan":
+            consumers[row.get("target_id", "")].add(row.get("model", ""))
+    return consumers
+
+
 def replicate_device_energy(run_dir: Path) -> dict[str, dict[str, float]]:
     """Sum CPU/GPU/RAM energy and stage wall time over every CodeCarbon CSV, per model.
 
@@ -258,20 +277,43 @@ def replicate_device_energy(run_dir: Path) -> dict[str, dict[str, float]]:
     rather than building it have no msa_build stage of their own, so their CodeCarbon
     wall time is inference-only and is smaller than their attributed manifest total.
     """
+    FIELDS = (("cpu_energy", "cpu_energy_kwh"),
+              ("gpu_energy", "gpu_energy_kwh"),
+              ("ram_energy", "ram_energy_kwh"),
+              ("duration", "codecarbon_wall_time_sec"))
+
     totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    msa_builds: dict[str, dict[str, float]] = {}   # target_id -> shared build cost
     for path in sorted(run_dir.glob("predictions/*/*/carbon/*.csv")):
-        if not any(path.name.endswith(suffix) for suffix, _ in CARBON_STAGE_SUFFIXES):
+        stage = next((s for suffix, s in CARBON_STAGE_SUFFIXES if path.name.endswith(suffix)), None)
+        if stage is None:
             continue
         model = path.parent.parent.name
+        target_id = path.parent.parent.parent.name
+        build: dict[str, float] = defaultdict(float)
         for row in read_csv(path):
-            for src, dst in (("cpu_energy", "cpu_energy_kwh"),
-                             ("gpu_energy", "gpu_energy_kwh"),
-                             ("ram_energy", "ram_energy_kwh"),
-                             ("duration", "codecarbon_wall_time_sec")):
+            for src, dst in FIELDS:
                 try:
-                    totals[model][dst] += float(row.get(src) or 0.0)
+                    value = float(row.get(src) or 0.0)
                 except (TypeError, ValueError):
                     continue
+                totals[model][dst] += value
+                build[dst] += value
+        if stage == "msa_build":
+            msa_builds[target_id] = dict(build)
+
+    # Charge the shared ColabFold MSA to the models that consume it, as the manifest
+    # already does. The build ran once; these are copies, so per-model figures compare
+    # models to each other but are not additive across them.
+    for target_id, models in shared_msa_consumers(run_dir).items():
+        build = msa_builds.get(target_id)
+        if not build:
+            continue
+        for model in models:
+            if model == "colabfold":
+                continue
+            for key, value in build.items():
+                totals[model][key] += value
     for model, vals in totals.items():
         device_total = sum(vals.get(k, 0.0) for k in
                            ("cpu_energy_kwh", "gpu_energy_kwh", "ram_energy_kwh"))
