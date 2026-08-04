@@ -124,6 +124,89 @@ def load_accuracy(run_dir: Path, rep: str) -> pd.DataFrame:
     return out[["rep", "target_id", "model", "best_lddt_ca"]]
 
 
+# CodeCarbon writes one CSV per (target, model, stage). The stage is only recoverable
+# from the filename suffix: msa_build is the shared ColabFold/MMseqs2 search (colabfold
+# rows only), msa_features is AF2's jackhmmer/HHblits stage (af2 only, and absent from
+# any rep that reuses features.pkl).
+CARBON_STAGE_SUFFIXES = (
+    ("msa_build_emissions.csv", "msa_build"),
+    ("msa_features_emissions.csv", "msa_features"),
+    ("inference_emissions.csv", "inference"),
+)
+
+DEVICE_ENERGY_COLS = ["cpu_energy", "gpu_energy", "ram_energy", "energy_consumed"]
+
+
+def load_device_energy(run_dir: Path, rep: str) -> pd.DataFrame:
+    """Per (target, model, stage) CPU/GPU/RAM energy from the CodeCarbon CSVs.
+
+    This is the only device-resolved measurement in the pipeline: the prediction
+    manifest records no device at all. Note it splits *energy*, not wall time --
+    a stage occupies wall-clock while both CPU and GPU are partly busy, so there is
+    no meaningful per-device wall time to report.
+    """
+    rows = []
+    for path in sorted(run_dir.glob("predictions/*/*/carbon/*.csv")):
+        stage = next((s for suffix, s in CARBON_STAGE_SUFFIXES if path.name.endswith(suffix)), None)
+        if stage is None:
+            continue
+        try:
+            df = pd.read_csv(path)
+        except Exception:
+            continue
+        record = {
+            "rep": rep,
+            "target_id": path.parent.parent.parent.name,
+            "model": path.parent.parent.name,
+            "stage": stage,
+        }
+        for column in DEVICE_ENERGY_COLS + ["duration"]:
+            record[column] = (
+                float(pd.to_numeric(df[column], errors="coerce").fillna(0).sum())
+                if column in df.columns else np.nan
+            )
+        rows.append(record)
+    if not rows:
+        print(f"WARNING: {rep}: no CodeCarbon CSVs under {run_dir}/predictions", file=sys.stderr)
+    return pd.DataFrame(rows)
+
+
+def device_energy_tables(dev: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """(per rep x model x stage, per rep x model, across-rep mean/std per model)."""
+    if dev.empty:
+        return (pd.DataFrame(),) * 3
+    agg = dict(
+        cpu_energy_kwh=("cpu_energy", "sum"),
+        gpu_energy_kwh=("gpu_energy", "sum"),
+        ram_energy_kwh=("ram_energy", "sum"),
+        measured_energy_kwh=("energy_consumed", "sum"),
+        n_files=("target_id", "count"),
+    )
+    by_stage = dev.groupby(["rep", "model", "stage"], sort=True).agg(**agg).reset_index()
+    by_model = dev.groupby(["rep", "model"], sort=True).agg(**agg).reset_index()
+
+    def gpu_share(frame: pd.DataFrame) -> pd.Series:
+        device_total = frame["cpu_energy_kwh"] + frame["gpu_energy_kwh"] + frame["ram_energy_kwh"]
+        return 100.0 * frame["gpu_energy_kwh"] / device_total.replace(0, np.nan)
+
+    by_stage["gpu_share_pct"] = gpu_share(by_stage)
+    by_model["gpu_share_pct"] = gpu_share(by_model)
+
+    metrics = ["cpu_energy_kwh", "gpu_energy_kwh", "ram_energy_kwh",
+               "measured_energy_kwh", "gpu_share_pct"]
+    rows = []
+    for model, group in by_model.groupby("model", sort=True):
+        row = {"model": model, "n_reps": int(group["rep"].nunique())}
+        for metric in metrics:
+            m, s = mean_value(group[metric]), sample_std(group[metric])
+            row[f"mean_{metric}"] = m
+            row[f"std_{metric}"] = s
+            row[f"cv_{metric}"] = cv(m, s)
+        rows.append(row)
+    across = pd.DataFrame(rows).sort_values("mean_gpu_energy_kwh", ascending=False, na_position="last")
+    return by_stage, by_model, across
+
+
 def classify_msa_roles(df: pd.DataFrame) -> pd.DataFrame:
     """Label each row builder / reuser / none, from the data rather than a model list."""
     reused = df.get("msa_reused", pd.Series("", index=df.index)).astype(str).str.lower().eq("true")
@@ -316,7 +399,9 @@ def benchmark_totals(df: pd.DataFrame) -> pd.DataFrame:
 
 def write_markdown(summary: pd.DataFrame, totals: pd.DataFrame, acc: pd.DataFrame,
                    drift: pd.DataFrame, dropped: pd.DataFrame, reps: list[str],
-                   run_dirs: list[Path], tol: float, output: Path) -> None:
+                   run_dirs: list[Path], tol: float, output: Path,
+                   dev_across: pd.DataFrame | None = None,
+                   dev_by_stage: pd.DataFrame | None = None) -> None:
     def fmt(value: object, places: int = 5) -> str:
         if pd.isna(value):
             return ""
@@ -401,6 +486,37 @@ def write_markdown(summary: pd.DataFrame, totals: pd.DataFrame, acc: pd.DataFram
             fmt(row["shared_msa_overcount_runtime_sec"] / 3600, 3),
             fmt(row["benchmark_incremental_co2_g"], 1),
         ]) + " |")
+
+    if dev_across is not None and not dev_across.empty:
+        lines += [
+            "", "## Energy by device (CPU / GPU / RAM)", "",
+            "From the per-(target, model, stage) CodeCarbon CSVs -- the only device-resolved "
+            "measurement in the pipeline, since the prediction manifest records no device. "
+            "This splits **energy, not wall time**: a stage occupies wall-clock while both CPU "
+            "and GPU are partly busy, so there is no meaningful per-device wall time.",
+            "",
+        ]
+        d_headers = ["model", "n_reps", "CPU (kWh)", "GPU (kWh)", "RAM (kWh)",
+                     "measured total (kWh)", "GPU share (%)"]
+        lines += ["| " + " | ".join(d_headers) + " |",
+                  "| " + " | ".join(["---"] * len(d_headers)) + " |"]
+        for _, row in dev_across.iterrows():
+            lines.append("| " + " | ".join([
+                str(row["model"]),
+                str(int(row["n_reps"])),
+                pm(row["mean_cpu_energy_kwh"], row["std_cpu_energy_kwh"], 1.0, 4),
+                pm(row["mean_gpu_energy_kwh"], row["std_gpu_energy_kwh"], 1.0, 4),
+                pm(row["mean_ram_energy_kwh"], row["std_ram_energy_kwh"], 1.0, 4),
+                pm(row["mean_measured_energy_kwh"], row["std_measured_energy_kwh"], 1.0, 4),
+                pm(row["mean_gpu_share_pct"], row["std_gpu_share_pct"], 1.0, 1),
+            ]) + " |")
+        if dev_by_stage is not None and not dev_by_stage.empty:
+            stages = sorted(set(dev_by_stage["stage"]))
+            lines += [
+                "",
+                f"Stages present: {', '.join(stages)}. Per-stage and per-replicate breakdowns are "
+                "in reps_device_energy_by_stage.csv and reps_device_energy_per_rep.csv.",
+            ]
 
     lines += ["", "## Accuracy consistency across replicates", ""]
     if acc.empty:
@@ -509,6 +625,10 @@ def main() -> None:
     acc = accuracy_consistency(pd.concat(acc_frames, ignore_index=True), keep,
                                args.lddt_tol, nondeterministic)
 
+    dev_frames = [load_device_energy(d, r) for d, r in zip(run_dirs, reps)]
+    dev = pd.concat(dev_frames, ignore_index=True) if dev_frames else pd.DataFrame()
+    dev_by_stage, dev_by_model, dev_across = device_energy_tables(dev)
+
     out_dir = resolve(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     summary.to_csv(out_dir / "reps_model_cost_summary.csv", index=False)
@@ -521,8 +641,12 @@ def main() -> None:
         dropped.to_csv(out_dir / "reps_dropped_pairs.csv", index=False)
     if not drift.empty:
         drift.to_csv(out_dir / "reps_attribution_drift.csv", index=False)
+    if not dev_across.empty:
+        dev_by_stage.to_csv(out_dir / "reps_device_energy_by_stage.csv", index=False)
+        dev_by_model.to_csv(out_dir / "reps_device_energy_per_rep.csv", index=False)
+        dev_across.to_csv(out_dir / "reps_device_energy_summary.csv", index=False)
     write_markdown(summary, totals, acc, drift, dropped, reps, run_dirs,
-                   args.lddt_tol, out_dir / "reps_model_cost_summary.md")
+                   args.lddt_tol, out_dir / "reps_model_cost_summary.md", dev_across, dev_by_stage)
 
     display = summary[["model", "n_reps", "msa_role", "mean_total_runtime_sec",
                        "std_total_runtime_sec", "cv_total_runtime_sec", "mean_total_co2_g"]]

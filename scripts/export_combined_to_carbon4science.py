@@ -239,8 +239,45 @@ REPLICATE_COST_COLS = [
 ]
 
 
+# CodeCarbon writes one CSV per (target, model, stage); the stage is only recoverable
+# from the filename. This is the pipeline's only device-resolved measurement -- the
+# prediction manifest records no device -- and it splits *energy*, not wall time.
+CARBON_STAGE_SUFFIXES = (
+    ("msa_build_emissions.csv", "msa_build"),
+    ("msa_features_emissions.csv", "msa_features"),
+    ("inference_emissions.csv", "inference"),
+)
+
+
+def replicate_device_energy(run_dir: Path) -> dict[str, dict[str, float]]:
+    """Sum CPU/GPU/RAM energy over every CodeCarbon stage CSV, per model."""
+    totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for path in sorted(run_dir.glob("predictions/*/*/carbon/*.csv")):
+        if not any(path.name.endswith(suffix) for suffix, _ in CARBON_STAGE_SUFFIXES):
+            continue
+        model = path.parent.parent.name
+        for row in read_csv(path):
+            for src, dst in (("cpu_energy", "cpu_energy_kwh"),
+                             ("gpu_energy", "gpu_energy_kwh"),
+                             ("ram_energy", "ram_energy_kwh")):
+                try:
+                    totals[model][dst] += float(row.get(src) or 0.0)
+                except (TypeError, ValueError):
+                    continue
+    for model, vals in totals.items():
+        device_total = sum(vals.get(k, 0.0) for k in
+                           ("cpu_energy_kwh", "gpu_energy_kwh", "ram_energy_kwh"))
+        if device_total:
+            vals["gpu_share_pct"] = 100.0 * vals.get("gpu_energy_kwh", 0.0) / device_total
+    return {m: dict(v) for m, v in totals.items()}
+
+
 def replicate_cost_totals(run_dir: Path) -> dict[str, dict[str, float]]:
-    """Sum the cost columns over targets, per model, for one replicate."""
+    """Sum the cost columns over targets, per model, for one replicate.
+
+    Includes the CPU/GPU/RAM energy split from CodeCarbon alongside the manifest
+    runtime/energy/carbon columns.
+    """
     totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for row in read_csv(run_dir / "metadata" / "prediction_manifest.csv"):
         model = row.get("model", "")
@@ -251,7 +288,11 @@ def replicate_cost_totals(run_dir: Path) -> dict[str, dict[str, float]]:
                 totals[model][col] += float(row.get(col) or 0.0)
             except (TypeError, ValueError):
                 continue
-    return {m: dict(v) for m, v in totals.items()}
+    device = replicate_device_energy(run_dir)
+    out = {m: dict(v) for m, v in totals.items()}
+    for model, vals in device.items():
+        out.setdefault(model, {}).update(vals)
+    return out
 
 
 def across_rep_stats(by_label: dict[str, dict]) -> dict:
