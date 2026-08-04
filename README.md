@@ -12,41 +12,28 @@ Local benchmark harness for protein structure prediction. Runs 8 predictors on 4
 
 ## Results
 
-All 45 targets predicted successfully for all 8 models. Results ranked by mean lDDT-Cα (N=45).
+**Current results: 3 replicates (n=3, 2026-08-03).** Every value is **mean ± sample std across the three replicates**, where each replicate value is itself a mean over the 45 targets. This is a different quantity from the across-target std in the score CSVs.
 
 | Model | Mean lDDT-Cα | Mean TM-score | Mean GDT_TS (%) | Mean Cα-RMSD (Å) | MSA |
 |---|---:|---:|---:|---:|---|
-| colabfold | 0.876 | 0.770 | 60.96 | 11.972 | ColabFold/MMseqs2 |
-| openfold | 0.875 | 0.771 | 60.84 | 11.734 | ColabFold/MMseqs2 (shared) |
-| protenix | 0.871 | 0.744 | 57.50 | 15.361 | ColabFold/MMseqs2 (shared) |
-| af2 | 0.868 | 0.761 | 59.15 | 11.379 | Official AF2 DBs |
-| esmfold | 0.811 | 0.704 | 52.36 | 15.395 | None (language model) |
-| chai1 | 0.798 | 0.695 | 48.79 | 17.648 | None (embedding) |
-| omegafold | 0.770 | 0.669 | 47.18 | 17.345 | None (language model) |
-| boltz2 | 0.765 | 0.714 | 51.82 | 17.605 | None (explicit no-MSA) |
+| colabfold | 0.8760 ± 0.0002 | 0.7698 ± 0.0007 | 70.87 ± 0.03 | 11.964 ± 0.023 | ColabFold/MMseqs2 |
+| openfold | 0.8753 ± 0.0018 | 0.7698 ± 0.0033 | 71.22 ± 0.33 | 11.695 ± 0.033 | ColabFold/MMseqs2 (shared) |
+| protenix | 0.8709 ± 0.0008 | 0.7444 ± 0.0006 | 69.45 ± 0.09 | 15.361 ± 0.001 | ColabFold/MMseqs2 (shared) |
+| af2 | 0.8673 ± 0.0034 | 0.7626 ± 0.0026 | 70.15 ± 0.12 | 11.138 ± 0.244 | Official AF2 DBs |
+| boltz2 | 0.8627 ± 0.0018 | 0.7321 ± 0.0026 | 68.39 ± 0.13 | 17.579 ± 0.151 | ColabFold/MMseqs2 (shared) |
+| esmfold | 0.8101 ± 0.0000 | 0.7042 ± 0.0000 | 64.08 ± 0.00 | 15.397 ± 0.000 | None (language model) |
+| chai1 | 0.7977 ± 0.0009 | 0.6928 ± 0.0025 | 62.12 ± 0.13 | 17.479 ± 0.679 | None (embedding) |
+| omegafold | 0.7697 ± 0.0000 | 0.6690 ± 0.0000 | 59.19 ± 0.00 | 17.345 ± 0.000 | None (language model) |
 
-Full per-target and per-model scores: `results/2026-06-06-combine-8models/scores/all_targets_model_summary.csv`.
+Cost with the same error bars is in the [Cost (n=3)](#cost-n3) table below. Full per-target and per-model scores: `results/replicate_summary/` and each replicate's `scores/all_targets_model_summary.csv`.
 
-### 3-replicate GPU results (n=3, 2026-08-03)
+### Replicate design and what the error bars mean (n=3, 2026-08-03)
 
 The full 8-model benchmark was run three times end to end on GPU, to put error bars on cost (runtime / energy / CO₂). It turned out to be necessary for accuracy as well — see below. All **1080/1080 predictions succeeded** (45 targets × 8 models × 3 reps).
 
 - **Replicates:** `results/2026-06-09-combine-8models-gpu` (rep1), `results/20260802_082154_combine-8models-gpu_rep2`, `results/20260803_005751_combine-8models-gpu_rep3`.
 - **Driver:** `scripts/run_two_more_reps.sh` (serial, pinned to one GPU). **Aggregator:** `scripts/06_summarize_across_reps.py` → `results/replicate_summary/`.
-- Every value below is **mean ± sample std across the three replicates**, where each replicate value is itself a mean over the 45 targets. This is a different quantity from the across-target std reported in the score CSVs.
-
-| Model | Mean lDDT-Cα | Mean TM-score | Mean GDT_TS (%) | Mean Cα-RMSD (Å) |
-|---|---:|---:|---:|---:|
-| colabfold | 0.8760 ± 0.0002 | 0.7698 ± 0.0007 | 70.87 ± 0.03 | 11.964 ± 0.023 |
-| openfold | 0.8753 ± 0.0018 | 0.7698 ± 0.0033 | 71.22 ± 0.33 | 11.695 ± 0.033 |
-| protenix | 0.8709 ± 0.0008 | 0.7444 ± 0.0006 | 69.45 ± 0.09 | 15.361 ± 0.001 |
-| af2 | 0.8673 ± 0.0034 | 0.7626 ± 0.0026 | 70.15 ± 0.12 | 11.138 ± 0.244 |
-| boltz2 | 0.8627 ± 0.0018 | 0.7321 ± 0.0026 | 68.39 ± 0.13 | 17.579 ± 0.151 |
-| esmfold | 0.8101 ± 0.0000 | 0.7042 ± 0.0000 | 64.08 ± 0.00 | 15.397 ± 0.000 |
-| chai1 | 0.7977 ± 0.0009 | 0.6928 ± 0.0025 | 62.12 ± 0.13 | 17.479 ± 0.679 |
-| omegafold | 0.7697 ± 0.0000 | 0.6690 ± 0.0000 | 59.19 ± 0.00 | 17.345 ± 0.000 |
-
-GDT_TS above is the `external_tmscore_matched` method (2026-07-30 re-scoring), which is why the percentages are not comparable with the `internal_iterative_ca` values in the table above. lDDT-Cα, TM-score and Cα-RMSD are unaffected by that change.
+- GDT_TS uses the `external_tmscore_matched` method (2026-07-30 re-scoring); it is **not** comparable with `internal_iterative_ca` values published earlier. lDDT-Cα, TM-score and Cα-RMSD are unaffected by that change.
 
 **Only 2 of 8 models are deterministic.** esmfold and omegafold reproduce exactly (0.000000 spread on all 45 targets). At the per-target level, 152 of the 315 non-af2 (target, model) pairs exceed a 1e-3 lDDT-Cα tolerance — max spread boltz2 0.105, openfold 0.089, chai1 0.082, protenix 0.062, colabfold 0.0055. **chai1 is MSA-free**, so its spread cannot come from MSA rebuild; that isolates genuine sampling nondeterminism in the diffusion-based models. Per-target detail: `results/replicate_summary/reps_accuracy_consistency.csv`.
 
@@ -74,6 +61,23 @@ Three caveats on the cost figures:
 - † **AF2's MSA is measured once.** rep2/rep3 reuse rep1's `features.pkl` (`AF2_REUSE_FEATURES_ROOT`), which saves ~20 h per replicate. AF2's MSA build (19.83 h, 1873 g CO₂ — the single largest cost item in the benchmark, exceeding a whole replicate's incremental cost) therefore stays **n=1**, and the ± covers only AF2 inference. The MSA stage is deterministic given fixed databases, so this affects the cost error bar, not accuracy.
 - **Energy/CO₂ error bars are inflated by rep1.** rep2 and rep3 agree to within ~1% on energy, while rep1 is a systematic outlier in both directions by model group (~30–58% higher for the shared-MSA consumers, 14–20% lower for the MSA-free ones) even where runtime is nearly identical. This looks like a measurement/attribution difference in rep1, not run-to-run variance. Runtime is unaffected; prefer rep2+rep3 for energy until rep1's provenance is checked.
 - Runtime reproducibility is ~2% CV for the MSA-dominated models. The higher CV for the MSA-free models (chai1 18%, esmfold 13%) reflects their small totals, not instability.
+
+### Superseded: single-run results (2026-06-06)
+
+Retained for provenance. This is a **different run**, not a replicate of the set above: `results/2026-06-06-combine-8models`, single run, chai1/boltz2/esmfold executed on CPU, and GDT_TS from the older `internal_iterative_ca` method. Its boltz2 value in particular (0.765) is not reproduced by any of the three GPU replicates (0.8627 ± 0.0018) and should not be quoted alongside them.
+
+| Model | Mean lDDT-Cα | Mean TM-score | Mean GDT_TS (%) | Mean Cα-RMSD (Å) | MSA |
+|---|---:|---:|---:|---:|---|
+| colabfold | 0.876 | 0.770 | 60.96 | 11.972 | ColabFold/MMseqs2 |
+| openfold | 0.875 | 0.771 | 60.84 | 11.734 | ColabFold/MMseqs2 (shared) |
+| protenix | 0.871 | 0.744 | 57.50 | 15.361 | ColabFold/MMseqs2 (shared) |
+| af2 | 0.868 | 0.761 | 59.15 | 11.379 | Official AF2 DBs |
+| esmfold | 0.811 | 0.704 | 52.36 | 15.395 | None (language model) |
+| chai1 | 0.798 | 0.695 | 48.79 | 17.648 | None (embedding) |
+| omegafold | 0.770 | 0.669 | 47.18 | 17.345 | None (language model) |
+| boltz2 | 0.765 | 0.714 | 51.82 | 17.605 | None (explicit no-MSA) |
+
+Scores: `results/2026-06-06-combine-8models/scores/all_targets_model_summary.csv`.
 
 ### MSA cross-mode variants (2026-07-09)
 
